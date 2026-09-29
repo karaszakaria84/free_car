@@ -1,0 +1,3157 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>عالم مفتوح 3D - Open World City</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+  font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+}
+
+canvas { display: block; }
+
+/* ---------- شاشة البداية ---------- */
+#blocker {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 10, 25, 0.82);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  cursor: pointer;
+}
+
+#instructions {
+  text-align: center;
+  color: #fff;
+  padding: 40px 60px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 18px;
+  background: rgba(10, 20, 40, 0.6);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+  max-width: 640px;
+}
+
+#instructions h1 { font-size: 42px; margin-bottom: 14px; }
+
+#instructions .big {
+  font-size: 26px;
+  color: #7fd4ff;
+  margin-bottom: 22px;
+  animation: pulse 1.4s infinite;
+}
+
+@keyframes pulse { 50% { opacity: 0.45; } }
+
+.controls-help {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 17px;
+  color: #dfe9f5;
+  margin-bottom: 22px;
+}
+
+.controls-help b {
+  display: inline-block;
+  background: #1d2c44;
+  border: 1px solid #3a5a8a;
+  border-radius: 6px;
+  padding: 2px 10px;
+  margin-left: 6px;
+  color: #9fd0ff;
+}
+
+#instructions .hint { font-size: 15px; color: #ffd97a; }
+
+/* ---------- HUD ---------- */
+#hud { position: fixed; inset: 0; pointer-events: none; z-index: 20; display: none; }
+
+#crosshair {
+  position: absolute;
+  left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 22px;
+  font-weight: 300;
+  text-shadow: 0 0 4px #000;
+}
+
+#prompt {
+  position: absolute;
+  left: 50%;
+  top: 58%;
+  transform: translateX(-50%);
+  background: rgba(8, 15, 30, 0.85);
+  color: #fff;
+  border: 1px solid #3a5a8a;
+  border-radius: 10px;
+  padding: 10px 22px;
+  font-size: 18px;
+  display: none;
+  text-align: center;
+  line-height: 1.6;
+  max-width: 80vw;
+}
+
+#prompt kbd {
+  background: #1d2c44;
+  border: 1px solid #5a80b8;
+  border-radius: 5px;
+  padding: 1px 9px;
+  color: #9fd0ff;
+  font-family: inherit;
+}
+
+#speedometer {
+  position: absolute;
+  left: 24px;
+  bottom: 24px;
+  background: rgba(8, 15, 30, 0.8);
+  border: 1px solid #3a5a8a;
+  border-radius: 14px;
+  padding: 12px 24px;
+  color: #7fd4ff;
+  font-size: 34px;
+  font-weight: bold;
+  display: none;
+  text-align: center;
+}
+
+#speedometer small { display: block; font-size: 13px; color: #9ab4d4; font-weight: normal; }
+
+#vehicleName {
+  position: absolute;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  color: #ffd97a;
+  font-size: 17px;
+  background: rgba(8, 15, 30, 0.7);
+  padding: 6px 18px;
+  border-radius: 8px;
+  display: none;
+}
+
+#minimap {
+  position: absolute;
+  top: 18px;
+  left: 18px;
+  border: 2px solid rgba(120, 170, 255, 0.5);
+  border-radius: 12px;
+  overflow: hidden;
+  background: #0a1424;
+  opacity: 0.9;
+}
+
+#chatBox {
+  position: absolute;
+  bottom: 80px;
+  right: 20px;
+  max-width: 340px;
+  background: rgba(8, 15, 30, 0.85);
+  border: 1px solid #3a5a8a;
+  border-radius: 10px;
+  padding: 8px 12px;
+  color: #fff;
+  font-size: 14px;
+  display: none;
+  line-height: 1.6;
+}
+
+#mpPlayersHud {
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(8, 15, 30, 0.8);
+  border: 1px solid #3a5a8a;
+  border-radius: 10px;
+  padding: 6px 14px;
+  color: #9fd0ff;
+  font-size: 14px;
+  display: none;
+}
+
+/* ---------- Fade ---------- */
+#fade {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 40;
+  transition: opacity 1.2s;
+}
+
+/* ---------- Toast ---------- */
+#toast {
+  position: absolute;
+  left: 50%;
+  top: 12%;
+  transform: translateX(-50%);
+  background: rgba(10, 25, 15, 0.88);
+  color: #d8ffc8;
+  border: 1px solid #4a8a5a;
+  border-radius: 12px;
+  padding: 12px 26px;
+  font-size: 18px;
+  display: none;
+  max-width: 70%;
+  text-align: center;
+}
+
+/* ---------- Status bars ---------- */
+#statusBars {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  background: rgba(8, 15, 30, 0.8);
+  border: 1px solid #3a5a8a;
+  border-radius: 12px;
+  padding: 12px 16px;
+  color: #dfe9f5;
+  font-size: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 220px;
+}
+
+.statusRow { display: flex; align-items: center; gap: 10px; }
+
+.bar {
+  flex: 1;
+  height: 12px;
+  background: #1d2c44;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+#hungerFill {
+  height: 100%;
+  width: 100%;
+  background: #5ad87a;
+  border-radius: 6px;
+  transition: width 0.3s;
+}
+
+#foodCount { color: #ffd97a; }
+#moneyCount { color: #8dffa8; }
+
+.statusRow.chips { gap: 8px; flex-wrap: wrap; }
+.chip {
+  background: #16233a;
+  border: 1px solid #2f4a72;
+  border-radius: 8px;
+  padding: 3px 9px;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+#missionRow {
+  border-top: 1px solid rgba(120, 170, 255, 0.25);
+  padding-top: 8px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #ffd97a;
+}
+
+/* ---------- Top buttons ---------- */
+#topButtons {
+  position: fixed;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: none;
+  gap: 10px;
+  z-index: 60;
+}
+
+#topButtons.show { display: flex; }
+
+.topBtn {
+  pointer-events: auto;
+  cursor: pointer;
+  width: 62px;
+  height: 62px;
+  border-radius: 16px;
+  border: 2px solid rgba(140, 190, 255, 0.55);
+  background: linear-gradient(160deg, rgba(20, 36, 64, 0.92), rgba(8, 15, 30, 0.92));
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  font-family: inherit;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+  transition: transform 0.12s, border-color 0.12s, background 0.12s;
+}
+
+.topBtn .ico { font-size: 26px; line-height: 1; }
+.topBtn .cap { font-size: 10px; color: #9fd0ff; }
+.topBtn:hover { transform: translateY(-2px); border-color: #7fd4ff; }
+.topBtn:active { transform: translateY(1px) scale(0.96); }
+.topBtn.on { background: linear-gradient(160deg, #2b6cb0, #123a63); border-color: #ffe9a8; }
+
+/* ---------- Phone ---------- */
+#phone {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(3, 7, 16, 0.6);
+  backdrop-filter: blur(3px);
+}
+
+#phone.hidden { display: none; }
+
+#phoneBody {
+  width: 400px;
+  max-width: 94vw;
+  max-height: 88vh;
+  overflow-y: auto;
+  background: linear-gradient(170deg, #16233a, #0a1220);
+  border: 2px solid #3a5a8a;
+  border-radius: 26px;
+  padding: 16px;
+  color: #e8f0fa;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.75);
+}
+
+#phoneHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 18px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(120, 170, 255, 0.25);
+}
+
+#phoneMoney { color: #8dffa8; font-weight: bold; font-size: 16px; }
+
+#phoneApps {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  padding: 14px 0;
+}
+
+.app {
+  cursor: pointer;
+  font-family: inherit;
+  background: #1d2c44;
+  border: 1px solid #35547f;
+  border-radius: 14px;
+  padding: 12px 4px 9px;
+  color: #cfe0f5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  transition: background 0.12s, transform 0.12s;
+}
+
+.app .ico { font-size: 26px; line-height: 1; }
+.app small { font-size: 12px; font-weight: bold; }
+.app:hover { background: #27405f; transform: translateY(-2px); }
+.app.sel { background: #2b6cb0; border-color: #ffe9a8; color: #fff; }
+
+#phoneScreen {
+  background: rgba(4, 9, 18, 0.7);
+  border: 1px solid rgba(120, 170, 255, 0.2);
+  border-radius: 14px;
+  padding: 14px;
+  min-height: 200px;
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+#phoneScreen h3 { font-size: 17px; color: #7fd4ff; margin-bottom: 8px; }
+#phoneScreen .mis {
+  background: #16233a;
+  border: 1px solid #2f4a72;
+  border-radius: 12px;
+  padding: 11px 13px;
+  margin-bottom: 10px;
+}
+#phoneScreen .mis b { color: #ffd97a; }
+#phoneScreen .mis .pay { color: #8dffa8; font-weight: bold; }
+
+.pBtn {
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: bold;
+  width: 100%;
+  padding: 11px;
+  margin-top: 4px;
+  border-radius: 11px;
+  border: 1px solid #4a8a5a;
+  background: #1d4a2c;
+  color: #d8ffc8;
+  transition: background 0.12s;
+}
+.pBtn:hover { background: #276b3d; }
+.pBtn.blue { border-color: #3a5a8a; background: #1d2c44; color: #9fd0ff; }
+.pBtn.blue:hover { background: #27405f; }
+.pBtn.red { border-color: #8a4a4a; background: #4a1d1d; color: #ffc8c8; }
+.pBtn.red:hover { background: #6b2727; }
+.pBtn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+#phoneFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 12px;
+}
+#phoneFoot small { color: #7f96b4; font-size: 12px; }
+#phoneClose {
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: bold;
+  padding: 10px 20px;
+  border-radius: 11px;
+  border: 1px solid #8a6a3a;
+  background: #4a3a1d;
+  color: #ffe9a8;
+}
+#phoneClose:hover { background: #6b5327; }
+
+/* ---------- Room UI ---------- */
+.roomCode {
+  font-size: 34px;
+  font-weight: bold;
+  color: #ffe9a8;
+  letter-spacing: 8px;
+  text-align: center;
+  padding: 14px;
+  background: #0a1424;
+  border: 2px dashed #7fd4ff;
+  border-radius: 12px;
+  margin: 10px 0;
+  font-family: monospace;
+  direction: ltr;
+}
+
+.roomIP {
+  font-size: 18px;
+  font-weight: bold;
+  color: #8dffa8;
+  text-align: center;
+  padding: 10px;
+  background: #0a1424;
+  border: 1px solid #4a8a5a;
+  border-radius: 10px;
+  margin: 8px 0;
+  font-family: monospace;
+  direction: ltr;
+  cursor: pointer;
+  user-select: all;
+  transition: background 0.15s;
+}
+.roomIP:hover { background: #16233a; }
+
+.roomHint {
+  font-size: 13px;
+  color: #9ab4d4;
+  text-align: center;
+  margin: 6px 0;
+  line-height: 1.6;
+}
+
+.roomInput {
+  width: 100%;
+  padding: 12px;
+  font-size: 22px;
+  font-family: monospace;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 4px;
+  background: #0a1424;
+  color: #ffe9a8;
+  border: 2px solid #3a5a8a;
+  border-radius: 10px;
+  margin: 8px 0;
+  outline: none;
+}
+.roomInput:focus { border-color: #7fd4ff; }
+
+.playersList {
+  background: #16233a;
+  border: 1px solid #2f4a72;
+  border-radius: 10px;
+  padding: 10px;
+  margin: 8px 0;
+  font-size: 14px;
+}
+.playersList .pl {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(120,170,255,0.15);
+}
+.playersList .pl:last-child { border-bottom: none; }
+.playersList .pl .dot {
+  display: inline-block;
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  border: 1px solid #0a1a10;
+}
+
+/* ---------- Vehicle modal ---------- */
+#vehicleRoleModal {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(2, 6, 14, 0.72);
+  backdrop-filter: blur(7px);
+  pointer-events: auto;
+}
+
+#vehicleRoleModal.show { display: flex; }
+
+#vehicleRoleBox {
+  width: 430px;
+  max-width: 92vw;
+  padding: 28px;
+  border-radius: 24px;
+  border: 1px solid rgba(127, 212, 255, 0.45);
+  background: linear-gradient(165deg, rgba(22,35,58,0.98), rgba(7,13,25,0.98));
+  box-shadow: 0 25px 80px rgba(0,0,0,0.75);
+  color: #fff;
+  text-align: center;
+}
+
+#vehicleRoleBox h2 { margin-bottom: 8px; font-size: 28px; color: #ffe9a8; }
+#vehicleRoleName { color: #9fd0ff; font-size: 16px; margin-bottom: 22px; }
+
+.vehicleRoleBtns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.vehicleRoleBtn {
+  border: 1px solid #3a5a8a;
+  border-radius: 16px;
+  padding: 18px 12px;
+  background: linear-gradient(160deg, #1d2c44, #101a2b);
+  color: #fff;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 18px;
+  font-weight: bold;
+  transition: transform .15s, border-color .15s, background .15s;
+}
+
+.vehicleRoleBtn:hover {
+  transform: translateY(-3px);
+  border-color: #7fd4ff;
+  background: linear-gradient(160deg, #2b6cb0, #123a63);
+}
+
+.vehicleRoleBtn .roleIcon { display: block; font-size: 38px; margin-bottom: 7px; }
+
+#vehicleRoleCancel {
+  width: 100%;
+  margin-top: 14px;
+  padding: 10px;
+  border-radius: 11px;
+  border: 1px solid #5a5f6b;
+  background: #171d29;
+  color: #b9c4d3;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+}
+
+@media (max-width: 520px) {
+  #vehicleRoleBox { padding: 20px; }
+  #vehicleRoleBox h2 { font-size: 23px; }
+  .vehicleRoleBtns { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+  <div id="blocker">
+    <div id="instructions">
+      <h1>🌆 عالم مفتوح 3D</h1>
+      <p class="big">اضغط للعب</p>
+      <div class="controls-help">
+        <span><b>W A S D</b> : الحركة</span>
+        <span><b>الماوس</b> : الكاميرا</span>
+        <span><b>المسطرة (Space)</b> : القفز</span>
+        <span><b>E</b> : دخول المباني • ركوب/نزول المواصلات</span>
+        <span><b>F</b> : التفاعل (نوم • كشف • طلب أكل • أكل)</span>
+        <span><b>Shift</b> : جري</span>
+        <span><b>Tab 📱</b> : الموبايل (مهمات • أكل • فلوس • روم 🌐)</span>
+        <span><b>Enter 💬</b> : دردشة (جوه الروم)</span>
+      </div>
+      <p class="hint">افتح الموبايل بـ <b>Tab</b> → اضغط <b>🌐 روم</b> → <b>إنشاء روم</b> عشان تلعب مع أصحابك 🎮</p>
+    </div>
+  </div>
+
+  <div id="fade"></div>
+
+  <div id="topButtons">
+    <button id="phoneBtn" class="topBtn" title="الموبايل — Tab">
+      <span class="ico">📱</span>
+      <span class="cap">موبايلك</span>
+    </button>
+  </div>
+
+  <div id="hud">
+    <div id="crosshair">+</div>
+    <div id="prompt"></div>
+    <div id="toast"></div>
+    <div id="chatBox"></div>
+    <div id="mpPlayersHud"></div>
+
+    <div id="statusBars">
+      <div class="statusRow">
+        <span>🍖 الشبع</span>
+        <div class="bar"><div id="hungerFill"></div></div>
+      </div>
+      <div class="statusRow chips">
+        <span class="chip">🍔 وجبات: <b id="foodCount">0</b></span>
+        <span class="chip">💰 فلوسك: <b id="moneyCount">0</b> ج</span>
+      </div>
+      <div class="statusRow" id="missionRow">
+        <span id="missionHud">📋 مفيش مهمة — افتح الموبايل بـ Tab</span>
+      </div>
+    </div>
+
+    <div id="speedometer">
+      <span id="speedValue">0</span>
+      <small>كم/س</small>
+    </div>
+    <div id="vehicleName"></div>
+    <div id="minimap"><canvas id="minimapCanvas" width="180" height="180"></canvas></div>
+  </div>
+
+  <div id="vehicleRoleModal">
+    <div id="vehicleRoleBox">
+      <h2>🚌🚉 اختر دورك</h2>
+      <div id="vehicleRoleName">المواصلات</div>
+      <div class="vehicleRoleBtns">
+        <button id="driverRoleBtn" class="vehicleRoleBtn">
+          <span class="roleIcon">🕹️</span>
+          سائق
+          <small style="display:block;margin-top:6px;color:#9fd0ff;font-size:12px;">أنت اللي هتسوق</small>
+        </button>
+        <button id="passengerRoleBtn" class="vehicleRoleBtn">
+          <span class="roleIcon">💺</span>
+          راكب
+          <small style="display:block;margin-top:6px;color:#9fd0ff;font-size:12px;">المواصلات تمشي لوحدها</small>
+        </button>
+      </div>
+      <button id="vehicleRoleCancel">إلغاء</button>
+    </div>
+  </div>
+
+  <div id="phone" class="hidden">
+    <div id="phoneBody">
+      <div id="phoneHead">
+        <b>📱 موبايلك</b>
+        <span id="phoneMoney">💰 0 ج</span>
+      </div>
+      <div id="phoneApps">
+        <button class="app" id="appMissions"><span class="ico">📋</span><small>مهمات</small></button>
+        <button class="app" id="appFood"><span class="ico">🍔</span><small>أكل</small></button>
+        <button class="app" id="appWallet"><span class="ico">💰</span><small>فلوسي</small></button>
+        <button class="app" id="appMultiplayer"><span class="ico">🌐</span><small>روم</small></button>
+      </div>
+      <div id="phoneScreen"></div>
+      <div id="phoneFoot">
+        <button id="phoneClose">🔒 قفل الموبايل</button>
+        <small>أو اضغط Tab</small>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.min.js"></script>
+<script>
+/* =========================================================
+   عالم مفتوح 3D — Open World City (v3 + Room Multiplayer)
+   ========================================================= */
+
+// ---------- الأساسيات ----------
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x87b5e0);
+scene.fog = new THREE.Fog(0x87b5e0, 120, 520);
+
+const camera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.1, 1200);
+camera.rotation.order = 'YXZ';
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.appendChild(renderer.domElement);
+
+scene.add(new THREE.HemisphereLight(0xcfe8ff, 0x50604a, 0.85));
+const sun = new THREE.DirectionalLight(0xfff2d8, 1.15);
+sun.position.set(140, 220, 80);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+const S = 320;
+sun.shadow.camera.left = -S; sun.shadow.camera.right = S;
+sun.shadow.camera.top = S;   sun.shadow.camera.bottom = -S;
+sun.shadow.camera.far = 700;
+scene.add(sun);
+scene.add(sun.target);
+
+// ---------- أدوات ----------
+const mat = (color, opts = {}) => new THREE.MeshLambertMaterial({ color, ...opts });
+
+function addBox(w, h, d, x, y, z, color, opts = {}) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(color, opts));
+  m.position.set(x, y, z);
+  m.castShadow = true;
+  m.receiveShadow = true;
+  scene.add(m);
+  return m;
+}
+
+function makeLabel(text, x, y, z, scale = 1) {
+  const cv = document.createElement('canvas');
+  cv.width = 512; cv.height = 128;
+  const c = cv.getContext('2d');
+  c.fillStyle = 'rgba(8,15,30,0.75)';
+  c.roundRect(8, 20, 496, 88, 18); c.fill();
+  c.font = 'bold 56px Tahoma, Arial';
+  c.fillStyle = '#ffe9a8';
+  c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.fillText(text, 256, 66);
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: new THREE.CanvasTexture(cv), depthWrite: false
+  }));
+  sp.scale.set(20 * scale, 5 * scale, 1);
+  sp.position.set(x, y, z);
+  scene.add(sp);
+  return sp;
+}
+
+// ---------- سجلات ----------
+const solids = [];
+const pits = [];
+const ramps = [];
+const platforms = [];
+const vehicles = [];
+const interactions = [];
+const doors = [];
+const POIS = [];
+const interiors = {};
+let currentInterior = null;
+
+let money = 150;
+const MEAL_PRICE = 25;
+let missionsDone = 0;
+let missionsEarned = 0;
+
+function addSolid(x1, z1, x2, z2, h, base = 0) {
+  solids.push({ x1: Math.min(x1,x2), x2: Math.max(x1,x2), z1: Math.min(z1,z2), z2: Math.max(z1,z2), h, base });
+}
+
+function groundAt(x, z) {
+  for (const r of ramps) {
+    if (x >= r.x1 && x <= r.x2 && z >= r.z1 && z <= r.z2) {
+      const v = r.axis === 'z' ? z : x;
+      const t = THREE.MathUtils.clamp((v - r.from) / (r.to - r.from), 0, 1);
+      return THREE.MathUtils.lerp(r.y0, r.y1, t);
+    }
+  }
+  for (const p of pits) {
+    if (x >= p.x1 && x <= p.x2 && z >= p.z1 && z <= p.z2) return -p.depth;
+  }
+  return 0;
+}
+
+// ---------- الأرض ----------
+const ground = new THREE.Mesh(
+  new THREE.PlaneGeometry(900, 900),
+  new THREE.MeshLambertMaterial({ color: 0x5e8f4e })
+);
+ground.rotation.x = -Math.PI / 2;
+ground.receiveShadow = true;
+scene.add(ground);
+
+// ---------- الشوارع ----------
+const LINES = [-240, -180, -120, -60, 0, 60, 120, 180, 240];
+const ROAD_W = 14;
+const roadGeoX = new THREE.PlaneGeometry(600, ROAD_W);
+const roadGeoZ = new THREE.PlaneGeometry(ROAD_W, 600);
+const roadMat = new THREE.MeshLambertMaterial({ color: 0x33383d });
+const lineMat = new THREE.MeshBasicMaterial({ color: 0xd8c24a });
+
+for (const v of LINES) {
+  let r = new THREE.Mesh(roadGeoX, roadMat);
+  r.rotation.x = -Math.PI / 2; r.position.set(0, 0.02, v); r.receiveShadow = true; scene.add(r);
+  r = new THREE.Mesh(roadGeoZ, roadMat);
+  r.rotation.x = -Math.PI / 2; r.position.set(v, 0.02, 0); r.receiveShadow = true; scene.add(r);
+
+  const dash = new THREE.Mesh(new THREE.PlaneGeometry(600, 0.35), lineMat);
+  dash.rotation.x = -Math.PI / 2; dash.position.set(0, 0.04, v); scene.add(dash);
+  const dash2 = new THREE.Mesh(new THREE.PlaneGeometry(0.35, 600), lineMat);
+  dash2.rotation.x = -Math.PI / 2; dash2.position.set(v, 0.04, 0); scene.add(dash2);
+}
+
+// ---------- المباني العشوائية ----------
+const BLOCK_C = [-210, -150, -90, -30, 30, 90, 150, 210];
+const RESERVED = new Set([
+  '-150,-150', '-90,-30', '-30,-30', '30,-30',
+  '-30,30', '-90,-150', '-150,-90',
+]);
+function isReserved(cx, cz) {
+  if (Math.abs(cx) === 210 || Math.abs(cz) === 210) return true;
+  if (cx >= 90 && cz >= 90) return true;
+  return RESERVED.has(cx + ',' + cz);
+}
+
+function building(x, z, w, d, h, color, label) {
+  addBox(w, h, d, x, h / 2, z, color);
+  addSolid(x - w / 2, z - d / 2, x + w / 2, z + d / 2, h);
+  const winMat = new THREE.MeshBasicMaterial({ color: 0xbfe3ff });
+  const rows = Math.max(1, Math.floor(h / 6));
+  for (let i = 0; i < rows; i++) {
+    const wy = 3 + i * 6;
+    if (wy > h - 2) break;
+    for (const side of [-1, 1]) {
+      const win = new THREE.Mesh(new THREE.PlaneGeometry(w * 0.6, 1.6), winMat);
+      win.position.set(x, wy, z + side * (d / 2 + 0.06));
+      if (side < 0) win.rotation.y = Math.PI;
+      scene.add(win);
+      const win2 = new THREE.Mesh(new THREE.PlaneGeometry(d * 0.6, 1.6), winMat);
+      win2.rotation.y = Math.PI / 2;
+      win2.position.set(x + side * (w / 2 + 0.06), wy, z);
+      if (side < 0) win2.rotation.y = -Math.PI / 2;
+      scene.add(win2);
+    }
+  }
+  if (label) makeLabel(label, x, h + 5, z);
+}
+
+// ---------- الدواخل ----------
+function room(ox, oz, w, d, h, floorColor, wallColor, ceilColor) {
+  addBox(w, 0.4, d, ox, -0.2, oz, floorColor);
+  const T = 0.5;
+  addBox(w, h, T, ox, h / 2, oz - d / 2, wallColor); addSolid(ox - w / 2, oz - d / 2 - T / 2, ox + w / 2, oz - d / 2 + T / 2, h);
+  addBox(w, h, T, ox, h / 2, oz + d / 2, wallColor); addSolid(ox - w / 2, oz + d / 2 - T / 2, ox + w / 2, oz + d / 2 + T / 2, h);
+  addBox(T, h, d, ox - w / 2, h / 2, oz, wallColor); addSolid(ox - w / 2 - T / 2, oz - d / 2, ox - w / 2 + T / 2, oz + d / 2, h);
+  addBox(T, h, d, ox + w / 2, h / 2, oz, wallColor); addSolid(ox + w / 2 - T / 2, oz - d / 2, ox + w / 2 + T / 2, oz + d / 2, h);
+  addBox(w + 1, 0.4, d + 1, ox, h + 0.2, oz, ceilColor);
+  const L = new THREE.PointLight(0xfff2d8, 0.9, 75);
+  L.position.set(ox, h - 1.2, oz);
+  scene.add(L);
+  return { ox, oz, w, d, h, x1: ox - w / 2, z1: oz - d / 2, x2: ox + w / 2, z2: oz + d / 2 };
+}
+
+function exitDoor(ox, oz, d) {
+  const sz = oz + d / 2;
+  addBox(4.2, 4.2, 0.2, ox, 2.1, sz - 0.3, 0x3a2a1a);
+  addBox(3.6, 3.8, 0.16, ox, 1.9, sz - 0.42, 0x7a5230);
+  addBox(0.2, 0.2, 0.2, ox + 1.3, 1.9, sz - 0.55, 0xd8c24a);
+  const lamp = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.3, 0.3), new THREE.MeshBasicMaterial({ color: 0xfff0b0 }));
+  lamp.position.set(ox, 4.4, sz - 0.5); scene.add(lamp);
+  makeLabel('🚪 الخروج', ox, 5.6, sz - 1.2, 0.45);
+  doors.push({ x: ox, z: sz - 1.8, r: 3.2, label: 'اخرج بره المدينة', run: () => leaveInterior() });
+}
+
+function enterableBuilding(x, z, w, d, h, color, label, icon, side, interiorId) {
+  building(x, z, w, d, h, color, label);
+  const DW = 3.6, DH = 3.8;
+  const sz = side === 'south' ? z + d / 2 : z - d / 2;
+  const sgn = side === 'south' ? 1 : -1;
+  addBox(DW + 1.0, DH + 0.6, 0.22, x, (DH + 0.6) / 2, sz + sgn * 0.12, 0x4a3a2a);
+  addBox(DW, DH, 0.16, x, DH / 2, sz + sgn * 0.26, 0x7a5230);
+  addBox(0.2, 0.2, 0.2, x + DW / 2 - 0.5, DH / 2, sz + sgn * 0.38, 0xd8c24a);
+  const dz = sz + sgn * 2.8;
+  doors.push({ x, z: dz, r: 3.6, label: `ادخل ${label}`, run: () => enterInterior(interiorId) });
+  POIS.push({ x, z, icon, name: label });
+  interiors[interiorId].out = { x, z: dz, yaw: side === 'south' ? Math.PI : 0 };
+}
+
+function tableSet(x, z, topColor = 0xb08050) {
+  addBox(2.4, 0.9, 2.4, x, 0.45, z, topColor);
+  for (const [cx, cz] of [[-2, 0], [2, 0], [0, -2], [0, 2]]) {
+    addBox(0.8, 0.75, 0.8, x + cx, 0.375, z + cz, 0x604020);
+  }
+}
+
+const genericColors = [0x9aa7b5, 0xb5a48f, 0x8f9bb5, 0xa8b58f, 0xb58f9a, 0x7f96a8];
+let seed = 7;
+const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+
+for (const cx of BLOCK_C) {
+  for (const cz of BLOCK_C) {
+    if (isReserved(cx, cz)) continue;
+    const n = 1 + Math.floor(rand() * 2);
+    for (let i = 0; i < n; i++) {
+      const w = 12 + rand() * 16, d = 12 + rand() * 16, h = 8 + rand() * 45;
+      const ox = (rand() - 0.5) * (40 - w), oz = (rand() - 0.5) * (40 - d);
+      building(cx + ox, cz + oz, w, d, h, genericColors[Math.floor(rand() * genericColors.length)]);
+    }
+  }
+}
+
+const INT_POS = {
+  house:    [1400, -1400],
+  burger:   [2100, -1400],
+  pizza:    [2800, -1400],
+  shawarma: [3500, -1400],
+  hospital: [1400, -2100],
+  school:   [2100, -2100],
+};
+function defInterior(id, name, icon) {
+  const [ox, oz] = INT_POS[id];
+  interiors[id] = { id, name, icon, ox, oz, spawn: null, out: null };
+}
+
+defInterior('school', 'المدرسة', '🏫');
+enterableBuilding(-90, -150, 40, 26, 8, 0xd9a066, 'مدرسة 🏫', '🏫', 'south', 'school');
+addBox(6, 2.2, 0.3, -90, 5.5, -137.2, 0x274d36);
+
+defInterior('hospital', 'المستشفى', '🏥');
+enterableBuilding(-150, -90, 30, 24, 9, 0xf0f4f8, 'مستشفى 🏥', '🏥', 'south', 'hospital');
+addBox(0.9, 4, 0.25, -150, 6.6, -77.7, 0xd03030);
+addBox(2.8, 0.9, 0.25, -150, 6.6, -77.7, 0xd03030);
+
+function restaurant(x, z, color, label, dish, id) {
+  defInterior(id, label, '🍴');
+  enterableBuilding(x, z, 22, 18, 6.5, color, label, '🍴', 'south', id);
+  interiors[id].dish = dish;
+}
+restaurant(-30, -30, 0xc96f4a, 'مطعم 🍔', 'برجر', 'burger');
+restaurant(30, -30, 0xb0563f, 'مطعم 🍕', 'بيتزا', 'pizza');
+restaurant(-30, 30, 0x8a6db1, 'مطعم 🌮', 'شاورما', 'shawarma');
+
+// ---------- البيت الكبير ----------
+const HX1 = -172, HX2 = -140, HZ1 = -172, HZ2 = -144, WH = 7, T = 0.4;
+const DOOR_X1 = -152, DOOR_X2 = -146;
+addBox(HX2 - HX1 + 1, 0.3, HZ2 - HZ1 + 1, (HX1 + HX2) / 2, 0.15, (HZ1 + HZ2) / 2, 0x9a7b58);
+addBox(HX2 - HX1 + T, WH, T, (HX1 + HX2) / 2, WH / 2, HZ1, 0xe0d2b8); addSolid(HX1, HZ1 - T, HX2, HZ1 + T, WH);
+addBox(T, WH, HZ2 - HZ1, HX1, WH / 2, (HZ1 + HZ2) / 2, 0xe0d2b8); addSolid(HX1 - T, HZ1, HX1 + T, HZ2, WH);
+addBox(T, WH, HZ2 - HZ1, HX2, WH / 2, (HZ1 + HZ2) / 2, 0xe0d2b8); addSolid(HX2 - T, HZ1, HX2 + T, HZ2, WH);
+addBox(DOOR_X1 - HX1, WH, T, (HX1 + DOOR_X1) / 2, WH / 2, HZ2, 0xe0d2b8); addSolid(HX1, HZ2 - T, DOOR_X1, HZ2 + T, WH);
+addBox(HX2 - DOOR_X2, WH, T, (DOOR_X2 + HX2) / 2, WH / 2, HZ2, 0xe0d2b8); addSolid(DOOR_X2, HZ2 - T, HX2, HZ2 + T, WH);
+addBox(DOOR_X2 - DOOR_X1 + 0.4, WH - 3.4, T, (DOOR_X1 + DOOR_X2) / 2, WH - (WH - 3.4) / 2, HZ2, 0xe0d2b8);
+addBox(HX2 - HX1 + 2, 0.4, HZ2 - HZ1 + 2, (HX1 + HX2) / 2, WH + 0.2, (HZ1 + HZ2) / 2, 0x7a4f3a);
+
+const winGlass = new THREE.MeshBasicMaterial({ color: 0xbfe3ff });
+for (const wx of [-160, -143]) {
+  const win = new THREE.Mesh(new THREE.PlaneGeometry(4, 2), winGlass);
+  win.position.set(wx, 3.6, HZ2 + 0.25);
+  scene.add(win);
+}
+
+const doorPivot = new THREE.Group();
+doorPivot.position.set(DOOR_X1, 0, HZ2);
+const doorMesh = new THREE.Mesh(new THREE.BoxGeometry(0.25, 3.4, DOOR_X2 - DOOR_X1), mat(0x6a4a2a));
+doorMesh.position.set(0, 1.7, (DOOR_X2 - DOOR_X1) / 2);
+doorMesh.castShadow = true;
+const doorHandle = new THREE.Mesh(new THREE.SphereGeometry(0.14, 8, 8), mat(0xd8c24a));
+doorHandle.position.set(0.2, 1.7, DOOR_X2 - DOOR_X1 - 0.6);
+doorPivot.add(doorMesh, doorHandle);
+scene.add(doorPivot);
+let doorOpenT = 0;
+
+addSolid(DOOR_X1, HZ2 - T, DOOR_X2, HZ2 + T, 3.4);
+makeLabel('🏠 بيتك', (HX1 + HX2) / 2, WH + 6, (HZ1 + HZ2) / 2, 0.8);
+defInterior('house', 'بيتك', '🏠');
+POIS.push({ x: (HX1 + HX2) / 2, z: (HZ1 + HZ2) / 2, icon: '🏠', name: 'بيتك' });
+const HOUSE_DOOR = { x: (DOOR_X1 + DOOR_X2) / 2, z: HZ2 + 2.8 };
+doors.push({
+  x: HOUSE_DOOR.x, z: HOUSE_DOOR.z, r: 3.6,
+  label: 'ادخل بيتك 🏠', run: () => enterInterior('house')
+});
+interiors.house.out = { x: HOUSE_DOOR.x, z: HOUSE_DOOR.z, yaw: Math.PI };
+
+// ---------- الجراج ----------
+const GX1 = -172, GX2 = -152, GZ1 = -141, GZ2 = -128, GH = 5;
+addBox(GX2 - GX1, 0.3, GZ2 - GZ1, (GX1 + GX2) / 2, 0.15, (GZ1 + GZ2) / 2, 0x6f767d);
+addBox(GX2 - GX1, GH, T, (GX1 + GX2) / 2, GH / 2, GZ1, 0x9aa0a6); addSolid(GX1, GZ1 - T, GX2, GZ1 + T, GH);
+addBox(T, GH, GZ2 - GZ1, GX1, GH / 2, (GZ1 + GZ2) / 2, 0x9aa0a6); addSolid(GX1 - T, GZ1, GX1 + T, GZ2, GH);
+addBox(T, GH, GZ2 - GZ1, GX2, GH / 2, (GZ1 + GZ2) / 2, 0x9aa0a6); addSolid(GX2 - T, GZ1, GX2 + T, GZ2, GH);
+addBox(T, GH, T, GX1 + 0.5, GH / 2, GZ2, 0x9aa0a6);
+addBox(T, GH, T, GX2 - 0.5, GH / 2, GZ2, 0x9aa0a6);
+addBox(GX2 - GX1, GH - 3.4, T, (GX1 + GX2) / 2, GH - (GH - 3.4) / 2, GZ2, 0x9aa0a6);
+addBox(GX2 - GX1 + 1.2, 0.4, GZ2 - GZ1 + 1.2, (GX1 + GX2) / 2, GH + 0.2, (GZ1 + GZ2) / 2, 0x565c62);
+makeLabel('🚗 الجراج', (GX1 + GX2) / 2, GH + 5, (GZ1 + GZ2) / 2, 0.6);
+
+// ---------- المطار ----------
+const runway = new THREE.Mesh(new THREE.PlaneGeometry(210, 20), new THREE.MeshLambertMaterial({ color: 0x22262a }));
+runway.rotation.x = -Math.PI / 2; runway.position.set(145, 0.05, 150); runway.receiveShadow = true;
+scene.add(runway);
+for (let x = 45; x <= 240; x += 14) {
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(7, 0.8), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+  m.rotation.x = -Math.PI / 2; m.position.set(x, 0.07, 150); scene.add(m);
+}
+building(150, 105, 50, 22, 16, 0x6fa8c9, '✈️ المطار — صالة السفر');
+addBox(16, 0.5, 24, 150, 0.25, 128, 0x7f8a94);
+
+// =========================================================
+//         خط القطار الدائري
+// =========================================================
+const RAIL_Y = 12;
+const RING = 210;
+const RING_P = 4 * 2 * RING;
+
+function loopPos(s) {
+  s = ((s % RING_P) + RING_P) % RING_P;
+  if (s < 420)      return { x: -RING + s,        z: -RING, yaw:  Math.PI / 2 };
+  else if (s < 840) return { x:  RING,            z: -RING + (s - 420),  yaw: 0 };
+  else if (s < 1260)return { x:  RING - (s - 840),z:  RING, yaw: -Math.PI / 2 };
+  return              { x: -RING,            z:  RING - (s - 1260), yaw: Math.PI };
+}
+
+addBox(2 * RING + 12, 0.6, 12, 0, RAIL_Y + 0.1, -RING, 0x5c636a);
+addBox(2 * RING + 12, 0.6, 12, 0, RAIL_Y + 0.1,  RING, 0x5c636a);
+addBox(12, 0.6, 2 * RING + 12, -RING, RAIL_Y + 0.1, 0, 0x5c636a);
+addBox(12, 0.6, 2 * RING + 12,  RING, RAIL_Y + 0.1, 0, 0x5c636a);
+
+const railGeoH = new THREE.BoxGeometry(2 * RING + 12, 0.35, 0.5);
+const railGeoV = new THREE.BoxGeometry(0.5, 0.35, 2 * RING + 12);
+const railMat = mat(0x8d949b);
+for (const off of [-3, 3]) {
+  for (const zz of [-RING + off, RING + off]) {
+    const m = new THREE.Mesh(railGeoH, railMat); m.position.set(0, RAIL_Y + 0.6, zz); scene.add(m);
+  }
+  for (const xx of [-RING + off, RING + off]) {
+    const m = new THREE.Mesh(railGeoV, railMat); m.position.set(xx, RAIL_Y + 0.6, 0); scene.add(m);
+  }
+}
+
+function addBranchRailX(z, x1, x2) {
+  for (const off of [-3, 3]) {
+    const g = new THREE.BoxGeometry(Math.abs(x2-x1), 0.35, 0.5);
+    const m = new THREE.Mesh(g, railMat);
+    m.position.set((x1+x2)/2, RAIL_Y + 0.6, z + off);
+    scene.add(m);
+  }
+  for (let x=x1; x<=x2; x+=10) addBox(0.7, 0.22, 8, x, RAIL_Y + 0.38, z, 0x555b61);
+}
+function addBranchRailZ(x, z1, z2) {
+  for (const off of [-3, 3]) {
+    const g = new THREE.BoxGeometry(0.5, 0.35, Math.abs(z2-z1));
+    const m = new THREE.Mesh(g, railMat);
+    m.position.set(x + off, RAIL_Y + 0.6, (z1+z2)/2);
+    scene.add(m);
+  }
+  for (let z=z1; z<=z2; z+=10) addBox(8, 0.22, 0.7, x, RAIL_Y + 0.38, z, 0x555b61);
+}
+
+addBranchRailZ(-110, -210, 210);
+addBranchRailZ(110, -210, 210);
+addBranchRailX(-110, -210, 210);
+addBranchRailX(110, -210, 210);
+
+for (const x of [-110, 110]) {
+  addBranchRailZ(x, -210, -180);
+  addBranchRailZ(x, 180, 210);
+}
+for (const z of [-110, 110]) {
+  addBranchRailX(z, -210, -180);
+  addBranchRailX(z, 180, 210);
+}
+
+const TRAIN_BRANCHES = [
+  { axis: 'z', fixed: -110, a: -210, b: 210, sA: 100,  sB: 1160 },
+  { axis: 'z', fixed:  110, a: -210, b: 210, sA: 320,  sB: 940  },
+  { axis: 'x', fixed: -110, a: -210, b: 210, sA: 1580, sB: 740  },
+  { axis: 'x', fixed:  110, a: -210, b: 210, sA: 1360, sB: 840  },
+];
+
+function branchPoint(branch, t) {
+  t = THREE.MathUtils.clamp(t, 0, 1);
+  if (branch.axis === 'z') {
+    return { x: branch.fixed, z: THREE.MathUtils.lerp(branch.a, branch.b, t) };
+  }
+  return { x: THREE.MathUtils.lerp(branch.a, branch.b, t), z: branch.fixed };
+}
+
+function branchTangent(branch, dir) {
+  const sign = dir >= 0 ? 1 : -1;
+  if (branch.axis === 'z') return new THREE.Vector3(0, 0, sign);
+  return new THREE.Vector3(sign, 0, 0);
+}
+
+function nearestTrainSwitch(L, radius = 10) {
+  if (L.mode !== 'ring') return null;
+  let best = null;
+  let bestD = radius;
+
+  for (let i = 0; i < TRAIN_BRANCHES.length; i++) {
+    const b = TRAIN_BRANCHES[i];
+    for (const end of [0, 1]) {
+      const s = end === 0 ? b.sA : b.sB;
+      const p = loopPos(s);
+      const d = Math.hypot(L._x - p.x, L._z - p.z);
+      if (d < bestD) {
+        bestD = d;
+        best = { branchIndex: i, end, s, point: p, branch: b };
+      }
+    }
+  }
+  return best;
+}
+
+function updateTrainRailState(v, L) {
+  L._x = v.group.position.x;
+  L._z = v.group.position.z;
+}
+
+// مفترقات بين السكك الفرعية نفسها.
+// كل سكة فرعية ممكن تتقاطع مع سكة فرعية أخرى، وعند التقاطع
+// يقدر السائق يختار A للشمال/اليسار أو D للجنوب/اليمين.
+function nearestBranchCrossing(L, radius = 12) {
+  if (L.mode !== 'branch' || L.branchIndex < 0) return null;
+
+  const current = TRAIN_BRANCHES[L.branchIndex];
+  if (!current) return null;
+
+  let best = null;
+  let bestD = radius;
+
+  for (let i = 0; i < TRAIN_BRANCHES.length; i++) {
+    if (i === L.branchIndex) continue;
+    const other = TRAIN_BRANCHES[i];
+
+    // التقاطع الحقيقي هنا بين سكة X وسكة Z.
+    if (current.axis === other.axis) continue;
+
+    let x, z;
+    if (current.axis === 'x') {
+      x = other.fixed;
+      z = current.fixed;
+      if (x < Math.min(current.a, current.b) || x > Math.max(current.a, current.b)) continue;
+      if (z < Math.min(other.a, other.b) || z > Math.max(other.a, other.b)) continue;
+    } else {
+      x = current.fixed;
+      z = other.fixed;
+      if (z < Math.min(current.a, current.b) || z > Math.max(current.a, current.b)) continue;
+      if (x < Math.min(other.a, other.b) || x > Math.max(other.a, other.b)) continue;
+    }
+
+    const d = Math.hypot(L._x - x, L._z - z);
+    if (d < bestD) {
+      const currentT = current.axis === 'x'
+        ? (x - current.a) / (current.b - current.a)
+        : (z - current.a) / (current.b - current.a);
+      const otherT = other.axis === 'x'
+        ? (x - other.a) / (other.b - other.a)
+        : (z - other.a) / (other.b - other.a);
+
+      bestD = d;
+      best = {
+        branchIndex: i,
+        branch: other,
+        point: { x, z },
+        currentT: THREE.MathUtils.clamp(currentT, 0, 1),
+        otherT: THREE.MathUtils.clamp(otherT, 0, 1),
+        distance: d
+      };
+    }
+  }
+
+  return best;
+}
+
+const PIL_C = [-210, -150, -90, -30, 30, 90, 150, 210];
+for (const c of PIL_C) {
+  if (!(c >= -60 && c <= 60)) {
+    addBox(1.6, RAIL_Y, 1.6, c, RAIL_Y / 2, -RING - 5, 0x7a8188);
+    addBox(1.6, RAIL_Y, 1.6, c, RAIL_Y / 2, -RING + 5, 0x7a8188);
+  }
+  addBox(1.6, RAIL_Y, 1.6, c, RAIL_Y / 2, RING - 5, 0x7a8188);
+  addBox(1.6, RAIL_Y, 1.6, c, RAIL_Y / 2, RING + 5, 0x7a8188);
+  addBox(1.6, RAIL_Y, 1.6, -RING - 5, RAIL_Y / 2, c, 0x7a8188);
+  addBox(1.6, RAIL_Y, 1.6, -RING + 5, RAIL_Y / 2, c, 0x7a8188);
+  if (!(c >= 150 && c <= 210)) {
+    addBox(1.6, RAIL_Y, 1.6, RING - 5, RAIL_Y / 2, c, 0x7a8188);
+    addBox(1.6, RAIL_Y, 1.6, RING + 5, RAIL_Y / 2, c, 0x7a8188);
+  }
+}
+
+// ---------- محطة القطار ----------
+addBox(90, 1.2, 12, 0, RAIL_Y + 0.9, -199, 0xb8bec4);
+addSolid(-45, -205, 45, -193, 1.5, RAIL_Y);
+platforms.push({ x1: -45, z1: -205, x2: 45, z2: -193, top: RAIL_Y + 1.5 });
+addBox(60, 0.5, 10, 0, RAIL_Y + 8, -199, 0x4a6f8a);
+for (const px of [-25, 25]) addBox(0.6, 7, 0.6, px, RAIL_Y + 4.5, -201, 0x9aa0a6);
+makeLabel('🚉 محطة القطار المركزي', 0, RAIL_Y + 13, -199);
+
+for (let i = 0; i < 16; i++) {
+  const sz = -187 - i * 1.1, sy = (i + 1) * (RAIL_Y / 16);
+  addBox(12, sy, 1.2, -34, sy / 2, sz, 0xa8aeb4);
+}
+ramps.push({ axis: 'z', x1: -40.5, x2: -27.5, z1: -205, z2: -187, from: -187, to: -204, y0: 0, y1: RAIL_Y + 1.5 });
+addSolid(-41.5, -205, -40.5, -186, RAIL_Y + 4);
+addSolid(-27.5, -205, -26.5, -186, RAIL_Y + 4);
+
+const PLAT_TOP = RAIL_Y + 1.5;
+for (const [bx, bz, bw, bd] of [[0, -205.3, 90, 0.6], [-43, -192.7, 4, 0.6], [9, -192.7, 72, 0.6]]) {
+  addBox(bw, 1.1, bd, bx, PLAT_TOP + 0.55, bz, 0x8a9099);
+  addSolid(bx - bw / 2, bz - bd / 2, bx + bw / 2, bz + bd / 2, 1.1, PLAT_TOP);
+}
+
+// ---------- محطة المترو ----------
+const PIT_X1 = -125, PIT_X2 = -69, PIT_Z1 = -50, PIT_Z2 = -10, PIT_D = 10;
+const PIT_CX = -97;
+const OPEN = { x1: -109, x2: -85, z1: -48, z2: -37 };
+pits.push({ x1: PIT_X1, x2: PIT_X2, z1: PIT_Z1, z2: PIT_Z2, depth: PIT_D });
+addBox(PIT_X2 - PIT_X1, 0.4, PIT_Z2 - PIT_Z1, PIT_CX, -PIT_D - 0.2, -30, 0x4a4f55);
+const wallC = 0x5f666d;
+addBox(PIT_X2 - PIT_X1, PIT_D, 1, PIT_CX, -PIT_D / 2, PIT_Z1 - 0.5, wallC); addSolid(PIT_X1, PIT_Z1 - 1, PIT_X2, PIT_Z1, PIT_D, -PIT_D);
+addBox(PIT_X2 - PIT_X1, PIT_D, 1, PIT_CX, -PIT_D / 2, PIT_Z2 + 0.5, wallC); addSolid(PIT_X1, PIT_Z2, PIT_X2, PIT_Z2 + 1, PIT_D, -PIT_D);
+addBox(1, PIT_D, PIT_Z2 - PIT_Z1, PIT_X1 - 0.5, -PIT_D / 2, -30, wallC); addSolid(PIT_X1 - 1, PIT_Z1, PIT_X1, PIT_Z2, PIT_D, -PIT_D);
+addBox(1, PIT_D, PIT_Z2 - PIT_Z1, PIT_X2 + 0.5, -PIT_D / 2, -30, wallC); addSolid(PIT_X2, PIT_Z1, PIT_X2 + 1, PIT_Z2, PIT_D, -PIT_D);
+
+const SLABS = [
+  [PIT_X1, PIT_Z1, OPEN.x1, PIT_Z2],
+  [OPEN.x2, PIT_Z1, PIT_X2, PIT_Z2],
+  [OPEN.x1, PIT_Z1, OPEN.x2, OPEN.z1],
+  [OPEN.x1, OPEN.z2, OPEN.x2, PIT_Z2],
+];
+for (const [sx1, sz1, sx2, sz2] of SLABS) {
+  addBox(sx2 - sx1, 0.4, sz2 - sz1, (sx1 + sx2) / 2, -0.1, (sz1 + sz2) / 2, 0x50565c);
+  platforms.push({ x1: sx1, z1: sz1, x2: sx2, z2: sz2, top: 0.1 });
+}
+for (const [bx, bz, bw, bd] of [
+  [PIT_CX, OPEN.z2 + 0.6, OPEN.x2 - OPEN.x1 + 1.2, 1.2],
+  [OPEN.x1 - 0.6, (OPEN.z1 + OPEN.z2) / 2, 1.2, OPEN.z2 - OPEN.z1],
+  [OPEN.x2 + 0.6, (OPEN.z1 + OPEN.z2) / 2, 1.2, OPEN.z2 - OPEN.z1],
+  [-103.9, OPEN.z1 - 0.6, 11.4, 1.2],
+  [-90.1, OPEN.z1 - 0.6, 11.4, 1.2],
+]) {
+  addBox(bw, 1.1, bd, bx, 0.75, bz, 0x8a9099);
+  addSolid(bx - bw / 2, bz - bd / 2, bx + bw / 2, bz + bd / 2, 1.1);
+}
+for (let i = 0; i < 12; i++) {
+  const sz = OPEN.z1 + 0.5 + i * 0.9;
+  addBox(OPEN.x2 - OPEN.x1, 0.4, 0.95, PIT_CX, -0.3 - i * 0.75, sz, 0xa8aeb4);
+}
+ramps.push({ axis: 'z', x1: OPEN.x1, x2: OPEN.x2, z1: OPEN.z1, z2: OPEN.z2, from: OPEN.z1, to: OPEN.z2, y0: 0, y1: -PIT_D + 1 });
+makeLabel('🚇 مدخل محطة المترو', PIT_CX, 7, OPEN.z1 - 6, 0.75);
+addBox(52, 1, 4, -97, -9.5, -35, 0xb8bec4);
+addSolid(-123, -37, -71, -33, 1, -PIT_D);
+platforms.push({ x1: -123, z1: -37, x2: -71, z2: -33, top: -9 });
+addBox(52, 0.3, 6, -97, -9.9, -27, 0x3a3f45);
+const pitLight = new THREE.PointLight(0xfff0c8, 0.9, 80);
+pitLight.position.set(PIT_CX, -3, -30);
+scene.add(pitLight);
+const pitLight2 = new THREE.PointLight(0xfff0c8, 0.6, 60);
+pitLight2.position.set(PIT_CX, -3, -44);
+scene.add(pitLight2);
+makeLabel('🚇 محطة المترو', PIT_CX, -3, -26, 0.6);
+
+// ---------- بناء الدواخل ----------
+function buildHouseInterior() {
+  const I = interiors.house, ox = I.ox, oz = I.oz;
+  I.rect = room(ox, oz, 18, 15, 4.6, 0x9a7b58, 0xe0d2b8, 0xf4efe4);
+  addBox(5, 1, 7, ox - 5.5, 0.5, oz - 2.5, 0x5a7bb5);
+  addBox(5, 0.6, 1.5, ox - 5.5, 1.1, oz - 5.5, 0x3a5b95);
+  addBox(1.2, 0.9, 1.2, ox - 2.4, 0.45, oz - 5.5, 0x8a5a3a);
+  addBox(6, 1.4, 2.4, ox + 5.5, 0.7, oz + 1, 0x7a5a8a);
+  addBox(4.4, 2.6, 0.4, ox + 5.5, 2.5, oz - 5, 0x1a1a1a);
+  addBox(5, 0.2, 4, ox + 3, 0.11, oz + 1, 0xa8483f);
+  tableSet(ox + 1, oz + 3.5, 0x8a5a3a);
+  addBox(8, 1.2, 1.6, ox - 4.5, 0.6, oz + 6.3, 0xd8dee4);
+  addSolid(ox - 8.5, oz + 5.5, ox - 0.5, oz + 7.1, 1.2);
+  addBox(1.4, 2.2, 1.4, ox - 8, 1.1, oz + 4, 0xb0b8c0);
+  makeLabel('🛏️ أوضة النوم', ox - 5.5, 3.6, oz - 2.5, 0.4);
+  exitDoor(ox, oz, 15);
+  I.spawn = { x: ox, z: oz + 1.5, yaw: 0 };
+  interactions.push({ x: ox - 5.5, z: oz + 1.6, r: 3.4, label: 'نام في السرير 😴', run: doSleep });
+}
+
+function buildRestaurantInterior(id, color) {
+  const I = interiors[id], ox = I.ox, oz = I.oz;
+  I.rect = room(ox, oz, 15, 13, 4.2, 0x8a6a4a, color, 0xf4efe4);
+  addBox(8, 1.2, 1.8, ox, 0.6, oz - 4.8, 0x8a5a3a);
+  addSolid(ox - 4, oz - 5.7, ox + 4, oz - 3.9, 1.2);
+  addBox(7, 1.8, 0.15, ox, 3, oz - 6.3, 0x1a1a1a);
+  const menu = new THREE.Mesh(new THREE.PlaneGeometry(6, 1.4), new THREE.MeshBasicMaterial({ color: 0xffe9a8 }));
+  menu.position.set(ox, 3, oz - 6.2); scene.add(menu);
+  tableSet(ox - 4, oz + 1); tableSet(ox + 4, oz + 1); tableSet(ox, oz + 4);
+  makeLabel('🍽️ اطلب من هنا', ox, 3.2, oz - 3, 0.45);
+  exitDoor(ox, oz, 13);
+  I.spawn = { x: ox, z: oz + 1, yaw: 0 };
+  interactions.push({
+    x: ox, z: oz - 3.2, r: 3.6,
+    label: `اطلب ${I.dish} بـ ${MEAL_PRICE} جنيه 🍽️`,
+    run: () => { buyMeal(I.name); }
+  });
+}
+
+function buildHospitalInterior() {
+  const I = interiors.hospital, ox = I.ox, oz = I.oz;
+  I.rect = room(ox, oz, 20, 15, 4.6, 0xdfe6ec, 0xf0f4f8, 0xffffff);
+  addBox(7, 1.2, 2, ox + 4, 0.6, oz + 4.5, 0xd8dee4);
+  addSolid(ox + 0.5, oz + 3.5, ox + 7.5, oz + 5.5, 1.2);
+  for (let i = 0; i < 4; i++) {
+    const bx = ox - 7.5 + i * 5;
+    addBox(3, 0.8, 6, bx, 0.4, oz - 3.5, 0xffffff);
+    addBox(3, 0.3, 1.6, bx, 0.95, oz - 5.7, 0xc94f4f);
+    addBox(3.2, 1.6, 0.2, bx, 0.8, oz - 6.6, 0xb8c0c8);
+  }
+  addBox(0.9, 3, 0.2, ox, 3, oz - 7.3, 0xd03030);
+  addBox(2.4, 0.9, 0.2, ox, 3, oz - 7.3, 0xd03030);
+  makeLabel('🏥 سراير المرضى', ox - 2.5, 3.4, oz - 3.5, 0.45);
+  exitDoor(ox, oz, 15);
+  I.spawn = { x: ox, z: oz + 1.5, yaw: 0 };
+  interactions.push({ x: ox - 2.5, z: oz - 0.5, r: 4, label: 'اتمدد على السرير — الدكتور يكشف عليك 🩺', run: doCheckup });
+  interactions.push({ x: ox + 4, z: oz + 2.6, r: 3.2, label: 'اسأل الاستقبال 🏥', run: () => toast('🏥 الاستقبال: الدكتور مستنيك عند السراير') });
+}
+
+function buildSchoolInterior() {
+  const I = interiors.school, ox = I.ox, oz = I.oz;
+  I.rect = room(ox, oz, 22, 17, 4.8, 0xb09070, 0xd9a066, 0xf4efe4);
+  addBox(10, 3.4, 0.3, ox, 2.4, oz - 8.2, 0x274d36);
+  addBox(9, 0.8, 1.4, ox, 0.4, oz - 6.4, 0x8a5a3a);
+  addBox(1.4, 1.8, 1.4, ox - 5.2, 0.9, oz - 6.6, 0x6a4a2a);
+  for (let rI = 0; rI < 3; rI++) {
+    for (let cI = 0; cI < 4; cI++) {
+      addBox(2.6, 0.9, 1.4, ox - 7.8 + cI * 5.2, 0.45, oz + 1 + rI * 2.6, 0xa8763f);
+    }
+  }
+  makeLabel('🏫 الفصل', ox, 3.6, oz - 4, 0.5);
+  exitDoor(ox, oz, 17);
+  I.spawn = { x: ox, z: oz + 2.5, yaw: 0 };
+  interactions.push({ x: ox, z: oz - 4.4, r: 3.6, label: 'اقعد في الفصل 📚', run: () => toast('📚 حضرت الحصة!') });
+}
+
+buildHouseInterior();
+buildRestaurantInterior('burger', 0xc96f4a);
+buildRestaurantInterior('pizza', 0xb0563f);
+buildRestaurantInterior('shawarma', 0x8a6db1);
+buildHospitalInterior();
+buildSchoolInterior();
+
+POIS.push({ x: (GX1 + GX2) / 2, z: GZ2 + 4, icon: '🚗', name: 'الجراج' });
+POIS.push({ x: 150, z: 105, icon: '✈️', name: 'المطار' });
+POIS.push({ x: 0, z: -199, icon: '🚉', name: 'محطة القطار' });
+POIS.push({ x: PIT_CX, z: -30, icon: '🚇', name: 'محطة المترو' });
+
+// =========================================================
+//                 المركبات
+// =========================================================
+function makeWheels(group, positions, r = 0.55) {
+  const wheels = [];
+  const geo = new THREE.CylinderGeometry(r, r, 0.4, 14);
+  geo.rotateZ(Math.PI / 2);
+  for (const [wx, wy, wz] of positions) {
+    const w = new THREE.Mesh(geo, mat(0x1a1a1a));
+    w.position.set(wx, wy, wz);
+    w.castShadow = true;
+    group.add(w);
+    wheels.push(w);
+  }
+  return wheels;
+}
+
+function createCarModel(color, w = 2.1, l = 4.4, cabinColor = 0x9fd0e8) {
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.BoxGeometry(w, 0.9, l), mat(color));
+  body.position.y = 0.75; body.castShadow = true; g.add(body);
+  const cabin = new THREE.Mesh(new THREE.BoxGeometry(w * 0.85, 0.75, l * 0.5), mat(cabinColor));
+  cabin.position.set(0, 1.55, -l * 0.05); cabin.castShadow = true; g.add(cabin);
+  const wheels = makeWheels(g, [
+    [-w / 2, 0.55, l * 0.32], [w / 2, 0.55, l * 0.32],
+    [-w / 2, 0.55, -l * 0.32], [w / 2, 0.55, -l * 0.32],
+  ]);
+  const hl = new THREE.MeshBasicMaterial({ color: 0xfff6c0 });
+  for (const sx of [-0.65, 0.65]) {
+    const f = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.2, 0.1), hl);
+    f.position.set(sx, 0.8, l / 2 + 0.02); g.add(f);
+  }
+  return { group: g, wheels };
+}
+
+class Vehicle {
+  constructor(type, name, x, z, yaw, modelFn, opts = {}) {
+    this.type = type;
+    this.name = name;
+    this.group = new THREE.Group();
+    const built = modelFn();
+    this.model = built.group;
+    this.wheels = built.wheels || [];
+    this.group.add(this.model);
+    this.group.position.set(x, opts.y || 0, z);
+    this.group.rotation.y = yaw;
+    this.yaw = yaw;
+    this.speed = 0;
+    this.pitch = 0;
+    this.roll = 0;
+    this.ai = opts.ai || null;
+    this.shuttle = opts.shuttle || null;
+    this.loop = opts.loop || null;
+    this.role = 'passenger';
+    this.maxSpeed = opts.maxSpeed || 28;
+    this.boardR = opts.boardR || 7;
+    this.radius = opts.radius || 1.5;
+    scene.add(this.group);
+    vehicles.push(this);
+  }
+
+  forward() { return new THREE.Vector3(Math.sin(this.yaw), 0, Math.cos(this.yaw)); }
+
+  collides(x, z) {
+    for (const s of solids) {
+      if (s.base > 0.5) continue;
+      if (x > s.x1 - this.radius && x < s.x2 + this.radius &&
+          z > s.z1 - this.radius && z < s.z2 + this.radius) return true;
+    }
+    return false;
+  }
+
+  update(dt, keys, driven) {
+    if (driven && this.role === 'driver' && this.type === 'train') {
+      this.driveTrainOnRail(dt, keys);
+      return;
+    }
+    if (driven && this.role === 'driver' && this.type === 'bus') {
+      this.driveControls(dt, keys);
+      this.applyMove(dt, true);
+      return;
+    }
+    if (this.loop)    { this.updateLoop(dt); return; }
+    if (this.shuttle) { this.updateShuttle(dt); return; }
+    if (this.ai)      { this.updateAI(dt); return; }
+    if (!driven)      { this.speed *= 0.98; if (Math.abs(this.speed) < 0.05) this.speed = 0; this.applyMove(dt, false); return; }
+    if (this.type === 'plane') this.flyControls(dt, keys);
+    else this.driveControls(dt, keys);
+    this.applyMove(dt, true);
+  }
+
+  driveControls(dt, keys) {
+    const ACC = this.type === 'bus' ? 9 : 14;
+    if (keys['KeyW']) this.speed += ACC * dt;
+    else if (keys['KeyS']) this.speed -= ACC * 1.3 * dt;
+    else this.speed *= (1 - 1.2 * dt);
+    this.speed = THREE.MathUtils.clamp(this.speed, -this.maxSpeed * 0.4, this.maxSpeed);
+    if (Math.abs(this.speed) < 0.1) this.speed = 0;
+    const steer = (keys['KeyA'] ? 1 : 0) - (keys['KeyD'] ? 1 : 0);
+    const turn = steer * 1.9 * dt * Math.sign(this.speed) * Math.min(1, Math.abs(this.speed) / 6);
+    this.yaw += turn;
+  }
+
+  driveTrainOnRail(dt, keys) {
+    const L = this.loop || (this.loop = {
+      mode: 'ring', s: 0, cur: 22, cruise: 22,
+      y: RAIL_Y + 0.4, dwell: 0, dwelled: false,
+      branchIndex: -1, bt: 0, bdir: 1, switchCooldown: 0
+    });
+
+    if (L.switchCooldown > 0) L.switchCooldown -= dt;
+
+    // عند الاقتراب من التحويلة: السائق هو الذي يختار الاتجاه.
+    // A = شمال/يسار، D = جنوب/يمين بالنسبة لاتجاه القطار.
+    // القطار لا يغيّر السكة تلقائياً.
+    const currentSwitch = (L.mode === 'ring' && L.switchCooldown <= 0)
+      ? nearestTrainSwitch(L, 13)
+      : null;
+
+    if (currentSwitch && Math.abs(L.cur) > 1.2) {
+      L.cur *= (1 - 7.0 * dt);
+      if (Math.abs(L.cur) < 0.8) L.cur = 0;
+    } else {
+      if (keys['KeyW']) L.cur += 16 * dt;
+      else if (keys['KeyS']) L.cur -= 22 * dt;
+      else L.cur *= (1 - 1.4 * dt);
+    }
+
+    L.cur = THREE.MathUtils.clamp(L.cur, -12, 34);
+    if (Math.abs(L.cur) < 0.05) L.cur = 0;
+
+    if (L.mode === 'ring') {
+      L.s = ((L.s + L.cur * dt) % RING_P + RING_P) % RING_P;
+      const p = loopPos(L.s);
+      this.group.position.set(p.x, L.y, p.z);
+      updateTrainRailState(this, L);
+
+      const sw = (L.switchCooldown <= 0) ? nearestTrainSwitch(L, 13) : null;
+      if (sw && (keys['KeyA'] || keys['KeyD'])) {
+        const b = sw.branch;
+        const inwardDir = sw.end === 0 ? 1 : -1;
+        const tangent = branchTangent(b, inwardDir);
+        const f = this.forward();
+        const left = new THREE.Vector3(-f.z, 0, f.x);
+        const right = left.clone().multiplyScalar(-1);
+        const chooseLeft = keys['KeyA'];
+        const chosenSide = chooseLeft ? left : right;
+
+        // لا ندخل التحويلة إلا إذا كانت فعلاً في الجهة التي اختارها اللاعب.
+        // لو اختار الجهة الأخرى يكمل القطار على الخط الرئيسي بدون تغيير تلقائي.
+        if (tangent.dot(chosenSide) > 0.35) {
+          L.mode = 'branch';
+          L.branchIndex = sw.branchIndex;
+          L.bt = sw.end === 0 ? 0 : 1;
+          L.bdir = inwardDir;
+          L.switchCooldown = 1.0;
+          const bp = branchPoint(b, L.bt);
+          this.group.position.set(bp.x, L.y, bp.z);
+          this.yaw = Math.atan2(tangent.x, tangent.z);
+          this.group.rotation.set(0, this.yaw, 0);
+          this.speed = Math.max(2, L.cur);
+          toast(chooseLeft ? '↰ اخترت السكة الشمال' : '↱ اخترت السكة اليمين');
+        } else {
+          // اختيار الاتجاه الآخر = الاستمرار في السكة الرئيسية.
+          L.switchCooldown = 1.0;
+          this.speed = L.cur;
+          toast(chooseLeft ? '↰ السكة الشمال ليست التحويلة هنا — كملت مستقيم' : '↱ السكة اليمين ليست التحويلة هنا — كملت مستقيم');
+        }
+      }
+
+      let dy = p.yaw - this.yaw;
+      while (dy > Math.PI) dy -= Math.PI * 2;
+      while (dy < -Math.PI) dy += Math.PI * 2;
+      this.yaw += THREE.MathUtils.clamp(dy, -2.5 * dt, 2.5 * dt);
+      this.group.rotation.set(0, this.yaw, 0);
+      this.speed = L.cur;
+      return;
+    }
+
+    const b = TRAIN_BRANCHES[L.branchIndex];
+    if (!b) { L.mode = 'ring'; return; }
+    const branchLength = Math.abs(b.b - b.a);
+    L.bt += (L.cur * L.bdir * dt) / branchLength;
+
+    if (L.bt <= 0 || L.bt >= 1) {
+      const end = L.bt <= 0 ? 0 : 1;
+      L.bt = THREE.MathUtils.clamp(L.bt, 0, 1);
+      const bp = branchPoint(b, L.bt);
+      this.group.position.set(bp.x, L.y, bp.z);
+      L.s = end === 0 ? b.sA : b.sB;
+      L.mode = 'ring';
+      L.branchIndex = -1;
+      L.switchCooldown = 0.8;
+      const p = loopPos(L.s);
+      this.yaw = p.yaw;
+      this.group.rotation.set(0, this.yaw, 0);
+      this.speed = L.cur;
+      toast('🔄 رجعت للخط الدائري');
+      return;
+    }
+
+    const bp = branchPoint(b, L.bt);
+    this.group.position.set(bp.x, L.y, bp.z);
+    updateTrainRailState(this, L);
+
+    // مهم: السكة الفرعية نفسها ممكن يكون فيها تفرع لسكة فرعية أخرى.
+    // لا نغيّر الطريق تلقائياً؛ السائق هو الذي يختار A أو D.
+    const branchSwitch = (L.switchCooldown <= 0)
+      ? nearestBranchCrossing(L, 13)
+      : null;
+
+    if (branchSwitch && Math.abs(L.cur) > 1.2) {
+      L.cur *= (1 - 7.0 * dt);
+      if (Math.abs(L.cur) < 0.8) L.cur = 0;
+    }
+
+    if (branchSwitch && (keys['KeyA'] || keys['KeyD'])) {
+      const f = this.forward();
+      const left = new THREE.Vector3(-f.z, 0, f.x);
+      const right = left.clone().multiplyScalar(-1);
+      const chosenSide = keys['KeyA'] ? left : right;
+      const next = branchSwitch.branch;
+
+      let chosenDir = 0;
+      for (const dir of [1, -1]) {
+        const tangent = branchTangent(next, dir);
+        if (tangent.dot(chosenSide) > 0.35) {
+          chosenDir = dir;
+          break;
+        }
+      }
+
+      if (chosenDir !== 0) {
+        L.branchIndex = branchSwitch.branchIndex;
+        L.bt = branchSwitch.otherT;
+        L.bdir = chosenDir;
+        L.switchCooldown = 1.0;
+
+        const nextPoint = branchPoint(next, L.bt);
+        this.group.position.set(nextPoint.x, L.y, nextPoint.z);
+        const nextTangent = branchTangent(next, chosenDir);
+        this.yaw = Math.atan2(nextTangent.x, nextTangent.z);
+        this.group.rotation.set(0, this.yaw, 0);
+        this.speed = Math.max(2, L.cur);
+        updateTrainRailState(this, L);
+
+        toast(keys['KeyA'] ? '↰ دخلت السكة الفرعية الجديدة شمال' : '↱ دخلت السكة الفرعية الجديدة يمين');
+        return;
+      }
+    }
+
+    const tangent = branchTangent(b, L.bdir);
+    this.yaw = Math.atan2(tangent.x, tangent.z);
+    this.group.rotation.set(0, this.yaw, 0);
+    this.speed = L.cur;
+    updateTrainRailState(this, L);
+  }
+
+  flyControls(dt, keys) {
+    if (keys['KeyW']) this.speed += 16 * dt;
+    else if (keys['KeyS']) this.speed -= 20 * dt;
+    else this.speed *= (1 - 0.35 * dt);
+    this.speed = THREE.MathUtils.clamp(this.speed, 0, 75);
+    const onGround = this.group.position.y <= 0.05;
+    const steer = (keys['KeyA'] ? 1 : 0) - (keys['KeyD'] ? 1 : 0);
+    if (onGround) {
+      if (this.speed > 3) this.yaw += steer * 1.1 * dt;
+      if (this.speed > 38 || (this.speed > 30 && (keys['Space'] || keys['ArrowUp']))) {
+        this.group.position.y += 9 * dt;
+        this.pitch = THREE.MathUtils.lerp(this.pitch, 0.22, 2 * dt);
+      } else {
+        this.pitch = THREE.MathUtils.lerp(this.pitch, 0, 5 * dt);
+      }
+      this.roll = THREE.MathUtils.lerp(this.roll, steer * 0.1, 4 * dt);
+    } else {
+      this.yaw += steer * 1.0 * dt;
+      this.roll = THREE.MathUtils.lerp(this.roll, -steer * 0.5, 4 * dt);
+      let targetPitch = 0;
+      if (keys['Space'] || keys['ArrowUp']) targetPitch = 0.3;
+      else if (keys['ArrowDown']) targetPitch = -0.35;
+      else if (this.speed > 38 && this.group.position.y < 40) targetPitch = 0.14;
+      this.pitch = THREE.MathUtils.lerp(this.pitch, targetPitch, 2.5 * dt);
+      if (this.speed < 25) this.group.position.y -= (25 - this.speed) * 0.25 * dt;
+      this.group.position.y += Math.sin(this.pitch) * this.speed * dt;
+      this.group.position.y = THREE.MathUtils.clamp(this.group.position.y, 0, 150);
+      if (this.group.position.y <= 0) this.pitch = Math.min(this.pitch, 0);
+    }
+  }
+
+  applyMove(dt, checkCollision) {
+    const f = this.forward();
+    const horiz = this.type === 'plane' ? Math.cos(this.pitch) : 1;
+    const nx = this.group.position.x + f.x * this.speed * horiz * dt;
+    const nz = this.group.position.z + f.z * this.speed * horiz * dt;
+    if (this.type === 'plane') {
+      this.group.position.x = nx;
+      this.group.position.z = nz;
+    } else if (!checkCollision || !this.collides(nx, nz)) {
+      this.group.position.x = nx;
+      this.group.position.z = nz;
+    } else {
+      this.speed *= -0.3;
+    }
+    if (this.type !== 'plane' && this.type !== 'train' && this.type !== 'metro') {
+      this.group.position.y = groundAt(this.group.position.x, this.group.position.z);
+    }
+    this.group.rotation.set(this.pitch, this.yaw, this.roll);
+    for (const w of this.wheels) w.rotation.x += this.speed * dt * 1.6;
+  }
+
+  updateLoop(dt) {
+    const L = this.loop;
+    if (L.dwell > 0) {
+      L.dwell -= dt;
+      L.cur = THREE.MathUtils.lerp(L.cur, 0, 8 * dt);
+    } else {
+      const inStation = L.s > 180 && L.s < 300;
+      const target = (inStation && !L.dwelled) ? 0 : L.cruise;
+      L.cur += THREE.MathUtils.clamp(target - L.cur, -14 * dt, 7 * dt);
+      L.s = (L.s + L.cur * dt) % RING_P;
+      if (inStation && L.cur < 0.4 && !L.dwelled) { L.dwelled = true; L.dwell = 8; }
+      if (!inStation) L.dwelled = false;
+    }
+    const p = loopPos(L.s);
+    this.group.position.set(p.x, L.y, p.z);
+    let dy = p.yaw - this.yaw;
+    while (dy > Math.PI) dy -= Math.PI * 2;
+    while (dy < -Math.PI) dy += Math.PI * 2;
+    this.yaw += THREE.MathUtils.clamp(dy, -1.2 * dt, 1.2 * dt);
+    this.group.rotation.set(0, this.yaw, 0);
+    this.speed = L.cur;
+  }
+
+  updateShuttle(dt) {
+    const sh = this.shuttle;
+    if (sh.dwell > 0) { sh.dwell -= dt; sh.cur = 0; this.applyShuttlePos(); return; }
+    sh.cur = THREE.MathUtils.lerp(sh.cur, sh.speed, 2 * dt);
+    sh.t += sh.cur * dt * sh.dir;
+    if (sh.t > sh.to) { sh.t = sh.to; sh.dir = -1; sh.dwell = 6; }
+    if (sh.t < sh.from) { sh.t = sh.from; sh.dir = 1; sh.dwell = 6; }
+    this.applyShuttlePos();
+    this.speed = sh.cur * sh.dir;
+  }
+
+  applyShuttlePos() {
+    const sh = this.shuttle;
+    if (sh.axis === 'x') { this.group.position.x = sh.t; this.group.rotation.y = sh.dir > 0 ? Math.PI / 2 : -Math.PI / 2; }
+    else { this.group.position.z = sh.t; this.group.rotation.y = sh.dir > 0 ? 0 : Math.PI; }
+  }
+
+  updateAI(dt) {
+    const ai = this.ai;
+    const target = ai.path[ai.i];
+    const p = this.group.position;
+    const dx = target.x - p.x, dz = target.z - p.z;
+    const dist = Math.hypot(dx, dz);
+    ai.targetYaw = Math.atan2(dx, dz);
+    let dy = ai.targetYaw - this.yaw;
+    while (dy > Math.PI) dy -= Math.PI * 2;
+    while (dy < -Math.PI) dy += Math.PI * 2;
+    this.yaw += THREE.MathUtils.clamp(dy, -1.6 * dt, 1.6 * dt);
+    if (ai.stopping > 0) {
+      ai.stopping -= dt;
+      this.speed = THREE.MathUtils.lerp(this.speed, 0, 3 * dt);
+    } else {
+      this.speed = THREE.MathUtils.lerp(this.speed, ai.speed, 1.5 * dt);
+      if (dist < 3) { ai.i = (ai.i + 1) % ai.path.length; ai.stopping = ai.stopTime || 0; }
+    }
+    this.applyMove(dt, false);
+  }
+}
+
+function busModel() {
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.BoxGeometry(2.6, 2.6, 10), mat(0xe8b53a));
+  body.position.y = 1.8; body.castShadow = true; g.add(body);
+  const glass = new THREE.Mesh(new THREE.BoxGeometry(2.65, 1, 9.4), mat(0x28414f));
+  glass.position.y = 2.4; g.add(glass);
+  const wheels = makeWheels(g, [
+    [-1.3, 0.65, 3.4], [1.3, 0.65, 3.4],
+    [-1.3, 0.65, -3.4], [1.3, 0.65, -3.4],
+  ], 0.65);
+  return { group: g, wheels };
+}
+
+function planeModel() {
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.7, 12, 12), mat(0xeef2f5));
+  body.rotation.x = Math.PI / 2; body.position.y = 1.6; body.castShadow = true; g.add(body);
+  const nose = new THREE.Mesh(new THREE.SphereGeometry(0.9, 12, 8), mat(0x3a5a8a));
+  nose.position.set(0, 1.6, 6); g.add(nose);
+  const wing = new THREE.Mesh(new THREE.BoxGeometry(13, 0.25, 2.2), mat(0xd8dee4));
+  wing.position.set(0, 1.5, 0.5); wing.castShadow = true; g.add(wing);
+  const tailW = new THREE.Mesh(new THREE.BoxGeometry(5, 0.2, 1.4), mat(0xd8dee4));
+  tailW.position.set(0, 2.2, -5.2); g.add(tailW);
+  const tailV = new THREE.Mesh(new THREE.BoxGeometry(0.2, 2.4, 1.6), mat(0xc94f4f));
+  tailV.position.set(0, 3.2, -5.2); g.add(tailV);
+  const wheels = makeWheels(g, [[-0.8, 0.5, 3], [0.8, 0.5, 3], [0, 0.5, -4]], 0.5);
+  return { group: g, wheels };
+}
+
+function trainModel(color, windows, cars = 3) {
+  const g = new THREE.Group();
+  for (let c = 0; c < cars; c++) {
+    const z = (c - (cars - 1) / 2) * 13;
+    const car = new THREE.Mesh(new THREE.BoxGeometry(3.4, 3.6, 12), mat(color));
+    car.position.set(0, 2.4, z); car.castShadow = true; g.add(car);
+    const win = new THREE.Mesh(new THREE.BoxGeometry(3.5, 1.1, 10), mat(windows));
+    win.position.set(0, 3.1, z); g.add(win);
+    if (c < cars - 1) {
+      const link = new THREE.Mesh(new THREE.BoxGeometry(1, 0.5, 1.4), mat(0x333));
+      link.position.set(0, 1.6, z + 6.6); g.add(link);
+    }
+  }
+  return { group: g, wheels: [] };
+}
+
+new Vehicle('car', '🚗 عربيتك', -162, -134, 0,
+  () => createCarModel(0xc93a3a), { maxSpeed: 30 });
+
+new Vehicle('car', '🚗 تاكسي', 11, 45, 0, () => createCarModel(0xe8d53a), { maxSpeed: 30 });
+new Vehicle('car', '🚗 عربية زرقا', -11, -100, Math.PI, () => createCarModel(0x3a6ec9), { maxSpeed: 30 });
+new Vehicle('car', '🚗 عربية خضرا', 71, 10, Math.PI / 2, () => createCarModel(0x3ac96e), { maxSpeed: 30 });
+new Vehicle('car', '🚗 عربية بيضا', -110, -10, -Math.PI / 2, () => createCarModel(0xf0f0f0), { maxSpeed: 30 });
+new Vehicle('car', '🚗 عربية بنفسجي', 11, 190, 0, () => createCarModel(0x8a3ac9), { maxSpeed: 30 });
+
+new Vehicle('bus', '🚌 أتوبيس المدينة', -60, -55, 0, busModel, {
+  maxSpeed: 16, radius: 2,
+  ai: {
+    path: [{ x: -60, z: -55 }, { x: -60, z: 55 }, { x: 55, z: 60 }, { x: 60, z: -55 }, { x: -55, z: -60 }],
+    i: 0, speed: 9, stopping: 0, stopTime: 4,
+  },
+});
+
+new Vehicle('plane', '✈️ طائرة صغيرة', 55, 150, Math.PI / 2, planeModel, { maxSpeed: 75, radius: 3 });
+new Vehicle('plane', '✈️ طائرة ركاب', 85, 158, Math.PI / 2, planeModel, { maxSpeed: 75, radius: 3 });
+
+new Vehicle('train', '🚉 قطار المدينة', -210, -210, Math.PI / 2,
+  () => trainModel(0x3a6ec9, 0x9fd0e8),
+  { y: RAIL_Y + 0.4, boardR: 9, radius: 2.5,
+    loop: {
+      mode: 'ring', s: 100, cur: 22, cruise: 22,
+      y: RAIL_Y + 0.4, dwell: 0, dwelled: false,
+      branchIndex: -1, bt: 0, bdir: 1, switchCooldown: 0
+    } });
+
+new Vehicle('metro', '🚇 مترو الأنفاق (للركوب فقط)', -97, -27, Math.PI / 2,
+  () => trainModel(0xc93a6e, 0xffd0e0, 2),
+  { y: -10, boardR: 9, radius: 2.5,
+    shuttle: { axis: 'x', t: -97, from: -110, to: -84, speed: 12, dir: 1, cur: 12, dwell: 0 } });
+
+// =========================================================
+//                 اللاعب
+// =========================================================
+const player = {
+  pos: new THREE.Vector3(interiors.house.spawn.x, 1.7, interiors.house.spawn.z),
+  vel: new THREE.Vector3(),
+  yaw: interiors.house.spawn.yaw,
+  pitch: 0,
+  onGround: false,
+  vehicle: null,
+  eye: 1.7,
+  radius: 0.45,
+};
+currentInterior = 'house';
+
+let food = 0;
+let hunger = 100;
+let sleeping = false;
+let hungerWarned = false;
+
+function buyMeal(from) {
+  if (money < MEAL_PRICE) {
+    toast(`💸 مش معايا فلوس كفاية! الوجبة بـ ${MEAL_PRICE} جنيه`);
+    return false;
+  }
+  money -= MEAL_PRICE;
+  food++;
+  toast(`🍽️ اشتريت وجبة (${from}) — فاضل ${money} جنيه`);
+  return true;
+}
+
+const keys = {};
+addEventListener('keydown', e => {
+  if (e.code === 'Tab') { e.preventDefault(); if (locked || phoneOpen) togglePhone(); return; }
+  if (phoneOpen) return;
+  if (e.code === 'Enter' && mp.inRoom && locked) {
+    e.preventDefault();
+    const text = prompt('💬 رسالة:');
+    if (text && mp.ws && mp.ws.readyState === WebSocket.OPEN) {
+      mp.ws.send(JSON.stringify({ type: 'chat', text }));
+    }
+    return;
+  }
+  keys[e.code] = true;
+  if (e.code === 'KeyE') handleEnter();
+  if (e.code === 'KeyF') handleInteract();
+  if (['Space', 'ArrowUp', 'ArrowDown'].includes(e.code)) e.preventDefault();
+});
+addEventListener('keyup', e => keys[e.code] = false);
+
+document.getElementById('driverRoleBtn').addEventListener('click', () => {
+  if (pendingVehicle) {
+    enterVehicle(pendingVehicle, 'driver');
+    setTimeout(() => renderer.domElement.requestPointerLock(), 50);
+  }
+});
+document.getElementById('passengerRoleBtn').addEventListener('click', () => {
+  if (pendingVehicle) {
+    enterVehicle(pendingVehicle, 'passenger');
+    setTimeout(() => renderer.domElement.requestPointerLock(), 50);
+  }
+});
+document.getElementById('vehicleRoleCancel').addEventListener('click', closeVehicleRoleModal);
+
+const blocker = document.getElementById('blocker');
+const hud = document.getElementById('hud');
+const promptEl = document.getElementById('prompt');
+const fadeEl = document.getElementById('fade');
+const toastEl = document.getElementById('toast');
+const topButtonsEl = document.getElementById('topButtons');
+let locked = false;
+
+function syncTopButtons() {
+  topButtonsEl.classList.toggle('show', locked || phoneOpen);
+}
+
+blocker.addEventListener('click', () => renderer.domElement.requestPointerLock());
+
+document.addEventListener('pointerlockchange', () => {
+  locked = document.pointerLockElement === renderer.domElement;
+  if (locked) {
+    blocker.style.display = 'none';
+    hud.style.display = 'block';
+  } else if (phoneOpen) {
+    blocker.style.display = 'none';
+    hud.style.display = 'block';
+  } else {
+    blocker.style.display = 'flex';
+    hud.style.display = 'none';
+  }
+  syncTopButtons();
+});
+addEventListener('mousemove', e => {
+  if (!locked) return;
+  player.yaw -= e.movementX * 0.0023;
+  player.pitch -= e.movementY * 0.0023;
+  player.pitch = THREE.MathUtils.clamp(player.pitch, -Math.PI / 2 + 0.05, Math.PI / 2 - 0.05);
+});
+
+let toastTimer = 0;
+function toast(msg, dur = 3) {
+  toastEl.textContent = msg;
+  toastEl.style.display = 'block';
+  toastTimer = dur;
+}
+
+function nearestInteraction() {
+  let best = null, bestD = Infinity;
+  for (const it of interactions) {
+    const d = Math.hypot(player.pos.x - it.x, player.pos.z - it.z);
+    if (d < it.r && d < bestD) { bestD = d; best = it; }
+  }
+  return best;
+}
+
+function handleInteract() {
+  if (!locked || sleeping || teleporting || player.vehicle) return;
+  const it = nearestInteraction();
+  if (it) { it.run(); return; }
+  if (food > 0) { eat(); return; }
+  toast('مفيش حاجة تعملها هنا');
+}
+
+function eat() {
+  food--;
+  hunger = Math.min(100, hunger + 35);
+  hungerWarned = false;
+  toast('😋 همم.. أكلت!');
+}
+
+let teleporting = false;
+let doorLock = 0;
+function fadeTeleport(cb) {
+  if (teleporting || sleeping) return;
+  teleporting = true;
+  fadeEl.style.transition = 'opacity 0.45s';
+  fadeEl.style.opacity = '1';
+  setTimeout(() => {
+    cb();
+    doorLock = 1;
+    fadeEl.style.opacity = '0';
+    setTimeout(() => { teleporting = false; }, 520);
+  }, 480);
+}
+
+function enterInterior(id) {
+  const I = interiors[id];
+  if (!I) return;
+  fadeTeleport(() => {
+    currentInterior = id;
+    player.pos.set(I.spawn.x, player.eye, I.spawn.z);
+    player.vel.set(0, 0, 0);
+    player.yaw = I.spawn.yaw;
+    toast(`🚪 دخلت ${I.name}`);
+  });
+}
+
+function leaveInterior() {
+  const I = interiors[currentInterior];
+  if (!I) return;
+  fadeTeleport(() => {
+    currentInterior = null;
+    player.pos.set(I.out.x, player.eye, I.out.z);
+    player.vel.set(0, 0, 0);
+    player.yaw = I.out.yaw;
+    toast(`🚪 خرجت من ${I.name}`);
+  });
+}
+
+function nearestDoor() {
+  if (doorLock > 0) return null;
+  let best = null, bestD = Infinity;
+  for (const d of doors) {
+    const dist = Math.hypot(player.pos.x - d.x, player.pos.z - d.z);
+    if (dist < d.r && dist < bestD) { bestD = dist; best = d; }
+  }
+  return best;
+}
+
+function handleEnter() {
+  if (!locked || sleeping || teleporting) return;
+  if (player.vehicle) { exitVehicle(); return; }
+  const d = nearestDoor();
+  if (d) { d.run(); return; }
+  const v = nearestVehicle();
+  if (v) {
+    if (v.type === 'bus' || v.type === 'train') chooseVehicleRole(v);
+    else enterVehicle(v, 'driver');
+  }
+}
+
+function doCheckup() {
+  if (sleeping || teleporting) return;
+  sleeping = true;
+  fadeEl.style.transition = 'opacity 0.8s';
+  fadeEl.style.opacity = '1';
+  setTimeout(() => {
+    hunger = 100; hungerWarned = false;
+    toast('🩺 الدكتور كشف عليك — رجعتلك طاقتك!');
+    fadeEl.style.opacity = '0';
+    setTimeout(() => { sleeping = false; }, 900);
+  }, 1100);
+}
+
+function doSleep() {
+  if (sleeping || teleporting) return;
+  sleeping = true;
+  fadeEl.style.transition = 'opacity 1.2s';
+  fadeEl.style.opacity = '1';
+  setTimeout(() => {
+    hunger = Math.min(100, hunger + 15);
+    const sp = interiors.house.spawn;
+    player.pos.set(sp.x, player.eye, sp.z);
+    player.vel.set(0, 0, 0);
+    player.yaw = sp.yaw;
+    toast('💤 نمت نومة مريحة!');
+    fadeEl.style.opacity = '0';
+    setTimeout(() => { sleeping = false; }, 1300);
+  }, 1600);
+}
+
+// =========================================================
+//        الموبايل + المهمات + الفلوس
+// =========================================================
+const MISSION_SPOTS = [
+  { name: 'المطار',        icon: '✈️', x: 150,  z: 150  },
+  { name: 'محطة القطار',   icon: '🚉', x: 0,    z: -190 },
+  { name: 'المستشفى',      icon: '🏥', x: -150, z: -62  },
+  { name: 'المدرسة',       icon: '🏫', x: -90,  z: -124 },
+  { name: 'مطعم البرجر',   icon: '🍔', x: -30,  z: -12  },
+  { name: 'مطعم البيتزا',  icon: '🍕', x: 30,   z: -12  },
+  { name: 'مطعم الشاورما', icon: '🌮', x: -30,  z: 48   },
+  { name: 'المترو',        icon: '🚇', x: -97,  z: -3   },
+  { name: 'بيتك',          icon: '🏠', x: -149, z: -136 },
+  { name: 'الجراج',        icon: '🚗', x: -162, z: -118 },
+  { name: 'ميدان الشرق',   icon: '🌆', x: 150,  z: -90  },
+  { name: 'ميدان الغرب',   icon: '🌇', x: -150, z: 90   },
+  { name: 'الحي الشمالي',  icon: '🏙️', x: 90,   z: -150 },
+  { name: 'الحي الجنوبي',  icon: '🏙️', x: -30,  z: 150  },
+];
+
+function spotFree(x, z) {
+  if (x < -288 || x > 288 || z < -288 || z > 288) return false;
+  for (const s of solids) {
+    if (s.base !== 0) continue;
+    if (x > s.x1 - 1.5 && x < s.x2 + 1.5 && z > s.z1 - 1.5 && z < s.z2 + 1.5) return false;
+  }
+  for (const p of pits) {
+    if (x > p.x1 - 1 && x < p.x2 + 1 && z > p.z1 - 1 && z < p.z2 + 1) return false;
+  }
+  return true;
+}
+function freeSpot(x, z) {
+  if (spotFree(x, z)) return { x, z };
+  for (let r = 2; r <= 44; r += 2) {
+    for (let a = 0; a < 12; a++) {
+      const ang = a * Math.PI / 6 + r * 0.21;
+      const px = x + Math.cos(ang) * r, pz = z + Math.sin(ang) * r;
+      if (spotFree(px, pz)) return { x: px, z: pz };
+    }
+  }
+  return { x, z };
+}
+function pickSpot(exclude) {
+  for (let i = 0; i < 60; i++) {
+    const s = MISSION_SPOTS[Math.floor(Math.random() * MISSION_SPOTS.length)];
+    if (s !== exclude) return s;
+  }
+  return MISSION_SPOTS[0];
+}
+
+const missionObjs = [];
+function clearMissionObjs() {
+  for (const o of missionObjs) {
+    scene.remove(o);
+    o.traverse(n => {
+      if (n.geometry) n.geometry.dispose();
+      if (n.material) { if (n.material.map) n.material.map.dispose(); n.material.dispose(); }
+    });
+  }
+  missionObjs.length = 0;
+}
+
+function addMarker(x, z, color, label) {
+  const y = groundAt(x, z);
+  const g = new THREE.Group();
+  const beam = new THREE.Mesh(
+    new THREE.CylinderGeometry(1.3, 1.3, 140, 14, 1, true),
+    new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.2, side: THREE.DoubleSide, depthWrite: false })
+  );
+  beam.position.y = 70; g.add(beam);
+  const ring = new THREE.Mesh(
+    new THREE.RingGeometry(3.2, 4.3, 32),
+    new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthWrite: false })
+  );
+  ring.rotation.x = -Math.PI / 2; ring.position.y = 0.2; g.add(ring);
+  g.position.set(x, y, z);
+  g.userData.pulse = true;
+  scene.add(g); missionObjs.push(g);
+  missionObjs.push(makeLabel(label, x, y + 8, z, 0.5));
+  return g;
+}
+
+function addNPC(x, z) {
+  const y = groundAt(x, z);
+  const g = new THREE.Group();
+  const legs = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.85, 0.34), mat(0x2f3a4a));
+  legs.position.y = 0.43; g.add(legs);
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.74, 0.86, 0.42), mat(0x3f7fbf));
+  body.position.y = 1.28; g.add(body);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.28, 12, 10), mat(0xe0b48c));
+  head.position.y = 1.98; g.add(head);
+  const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.14, 12), mat(0xc94f4f));
+  cap.position.y = 2.18; g.add(cap);
+  g.position.set(x, y, z);
+  g.userData.bob = true;
+  scene.add(g); missionObjs.push(g);
+  missionObjs.push(makeLabel('👤 الزبون مستنيك', x, y + 3.6, z, 0.42));
+  return g;
+}
+
+function addPickupItem(x, z) {
+  const y = groundAt(x, z);
+  const g = new THREE.Group();
+  const box = new THREE.Mesh(
+    new THREE.BoxGeometry(0.95, 0.95, 0.95),
+    new THREE.MeshLambertMaterial({ color: 0xf2c14e, emissive: 0x4a3400 })
+  );
+  box.position.y = 1; g.add(box);
+  const ring = new THREE.Mesh(
+    new THREE.RingGeometry(1.1, 1.55, 22),
+    new THREE.MeshBasicMaterial({ color: 0xffd86a, transparent: true, opacity: 0.85, side: THREE.DoubleSide, depthWrite: false })
+  );
+  ring.rotation.x = -Math.PI / 2; ring.position.y = 0.14; g.add(ring);
+  g.position.set(x, y, z);
+  g.userData.spin = true;
+  scene.add(g); missionObjs.push(g);
+  return { obj: g, x, z, taken: false };
+}
+
+let activeMission = null;
+
+function startMission(type) {
+  clearMissionObjs();
+  if (type === 'deliver') {
+    const a = pickSpot();
+    let b = pickSpot(a);
+    for (let i = 0; i < 40 && Math.hypot(a.x - b.x, a.z - b.z) < 120; i++) b = pickSpot(a);
+    const from = freeSpot(a.x, a.z), to = freeSpot(b.x, b.z);
+    const dist = Math.hypot(from.x - to.x, from.z - to.z);
+    const reward = Math.max(40, Math.round((35 + dist * 0.55) / 5) * 5);
+    activeMission = {
+      type: 'deliver', stage: 1, from, to, reward,
+      fromName: a.name, toName: b.name, fromIcon: a.icon, toIcon: b.icon,
+      npc: addNPC(from.x, from.z),
+    };
+    activeMission.marker = addMarker(from.x, from.z, 0xff9a3a, `👤 خُد الزبون من ${a.icon} ${a.name}`);
+    toast(`📋 مهمة توصيل: روح لـ ${a.icon} ${a.name} — المكافأة ${reward} جنيه`);
+  } else {
+    const c = pickSpot();
+    const center = freeSpot(c.x, c.z);
+    const items = [];
+    for (let i = 0; i < 5; i++) {
+      const ang = (i / 5) * Math.PI * 2 + Math.random() * 0.8;
+      const rr = 10 + Math.random() * 20;
+      const p = freeSpot(center.x + Math.cos(ang) * rr, center.z + Math.sin(ang) * rr);
+      items.push(addPickupItem(p.x, p.z));
+    }
+    activeMission = { type: 'collect', center, items, total: items.length, got: 0, reward: 90, placeName: c.name, placeIcon: c.icon };
+    addMarker(center.x, center.z, 0x7fd8ff, `📦 اجمع ${items.length} شنط حوالي ${c.icon} ${c.name}`);
+    toast(`📋 مهمة جمع: اجمع ${items.length} شنط حوالي ${c.icon} ${c.name}`);
+  }
+  if (phoneOpen) renderPhone(curApp);
+}
+
+function finishMission() {
+  const M = activeMission;
+  if (!M) return;
+  money += M.reward;
+  missionsEarned += M.reward;
+  missionsDone++;
+  activeMission = null;
+  clearMissionObjs();
+  toast(`✅ المهمة خلصت! كسبت ${M.reward} جنيه — معاك ${money}`);
+  if (phoneOpen) renderPhone(curApp);
+}
+
+function cancelMission() {
+  activeMission = null;
+  clearMissionObjs();
+  toast('🚫 ألغيت المهمة');
+  if (phoneOpen) renderPhone(curApp);
+}
+
+function missionTarget() {
+  const M = activeMission;
+  if (!M) return null;
+  if (M.type === 'deliver') return M.stage === 1
+    ? { x: M.from.x, z: M.from.z, icon: '👤' }
+    : { x: M.to.x, z: M.to.z, icon: '🏁' };
+  return { x: M.center.x, z: M.center.z, icon: '📦' };
+}
+
+function updateMissions(dt, time) {
+  for (const o of missionObjs) {
+    if (o.userData.spin) o.rotation.y += dt * 1.9;
+    else if (o.userData.pulse) o.scale.setScalar(1 + Math.sin(time * 3) * 0.09);
+    else if (o.userData.bob) o.position.y = groundAt(o.position.x, o.position.z) + Math.abs(Math.sin(time * 2)) * 0.09;
+  }
+  const M = activeMission;
+  if (!M || currentInterior || teleporting || sleeping) return;
+
+  if (M.type === 'deliver') {
+    const t = M.stage === 1 ? M.from : M.to;
+    if (Math.hypot(player.pos.x - t.x, player.pos.z - t.z) < 5) {
+      if (M.stage === 1) {
+        M.stage = 2;
+        scene.remove(M.npc);
+        scene.remove(M.marker);
+        M.marker = addMarker(M.to.x, M.to.z, 0x6aff9a, `🏁 وصّل الزبون لـ ${M.toIcon} ${M.toName}`);
+        toast(`🚕 الزبون ركب! وصّله ${M.toIcon} ${M.toName}`);
+      } else {
+        finishMission();
+      }
+    }
+  } else {
+    for (const it of M.items) {
+      if (it.taken) continue;
+      if (Math.hypot(player.pos.x - it.x, player.pos.z - it.z) < 3) {
+        it.taken = true;
+        scene.remove(it.obj);
+        M.got++;
+        if (M.got < M.total) toast(`📦 لقيت شنطة! فاضل ${M.total - M.got}`);
+      }
+    }
+    if (M.got >= M.total) finishMission();
+  }
+}
+
+// =========================================================
+//              Multiplayer — نظام الرومات
+// =========================================================
+const mp = {
+  ws: null,
+  connected: false,
+  inRoom: false,
+  roomCode: null,
+  myId: null,
+  myName: 'لاعب',
+  myColor: Math.floor(Math.random() * 0xffffff),
+  players: {},
+  chatLog: [],
+  serverAddress: '',
+  serverURL: '',
+};
+
+function createRemotePlayer(name, color) {
+  const g = new THREE.Group();
+  const legs = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.85, 0.34), mat(0x2f3a4a));
+  legs.position.y = 0.43; g.add(legs);
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.74, 0.86, 0.42), mat(color));
+  body.position.y = 1.28; g.add(body);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.28, 12, 10), mat(0xe0b48c));
+  head.position.y = 1.98; g.add(head);
+  const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.14, 12), mat(color));
+  cap.position.y = 2.18; g.add(cap);
+
+  const cv = document.createElement('canvas');
+  cv.width = 256; cv.height = 64;
+  const c = cv.getContext('2d');
+  c.fillStyle = 'rgba(8,15,30,0.85)';
+  c.roundRect(0, 8, 256, 48, 12); c.fill();
+  c.font = 'bold 30px Tahoma';
+  c.fillStyle = '#fff';
+  c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.fillText((name || 'Player').slice(0, 14), 128, 32);
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: new THREE.CanvasTexture(cv), depthWrite: false
+  }));
+  sprite.scale.set(4, 1, 1);
+  sprite.position.y = 3;
+  g.add(sprite);
+
+  scene.add(g);
+  return g;
+}
+
+function upsertRemotePlayer(p) {
+  if (p.id === mp.myId) return;
+  let rp = mp.players[p.id];
+  if (!rp) {
+    rp = {
+      mesh: createRemotePlayer(p.name || 'Player', p.color || 0x3a9ad8),
+      name: p.name || 'Player',
+      x: p.x, y: p.y, z: p.z, yaw: p.yaw || 0,
+      color: p.color || 0x3a9ad8,
+      lastSeen: performance.now(),
+    };
+    rp.mesh.position.set(p.x, p.y, p.z);
+    mp.players[p.id] = rp;
+  }
+  rp.x = p.x; rp.y = p.y; rp.z = p.z; rp.yaw = p.yaw || 0;
+  rp.lastSeen = performance.now();
+}
+
+function removeRemotePlayer(id) {
+  const rp = mp.players[id];
+  if (rp && rp.mesh) scene.remove(rp.mesh);
+  delete mp.players[id];
+}
+
+function updateRemotePlayers(dt) {
+  const now = performance.now();
+  for (const id in mp.players) {
+    const rp = mp.players[id];
+    rp.mesh.position.x += (rp.x - rp.mesh.position.x) * Math.min(1, 12 * dt);
+    rp.mesh.position.y += (rp.y - rp.mesh.position.y) * Math.min(1, 12 * dt);
+    rp.mesh.position.z += (rp.z - rp.mesh.position.z) * Math.min(1, 12 * dt);
+    let dy = rp.yaw - rp.mesh.rotation.y;
+    while (dy > Math.PI) dy -= Math.PI * 2;
+    while (dy < -Math.PI) dy += Math.PI * 2;
+    rp.mesh.rotation.y += THREE.MathUtils.clamp(dy, -6 * dt, 6 * dt);
+    if (now - rp.lastSeen > 15000) removeRemotePlayer(id);
+  }
+  if (phoneOpen && curApp === 'multiplayer') refreshPlayersList();
+}
+
+let mpSendTimer = 0;
+function sendMyPos(dt) {
+  if (!mp.inRoom || !mp.ws || mp.ws.readyState !== WebSocket.OPEN) return;
+  mpSendTimer += dt;
+  if (mpSendTimer < 0.05) return;
+  mpSendTimer = 0;
+  mp.ws.send(JSON.stringify({
+    type: 'pos',
+    x: player.pos.x, y: player.pos.y, z: player.pos.z,
+    yaw: player.yaw, pitch: player.pitch,
+    vehicle: player.vehicle ? player.vehicle.type : null,
+  }));
+}
+
+function onServerMessage(ev) {
+  let msg;
+  try { msg = JSON.parse(ev.data); } catch { return; }
+
+  if (msg.type === 'serverInfo') {
+    mp.serverAddress = msg.address;
+    mp.serverURL = `ws://${msg.address}`;
+    if (phoneOpen && curApp === 'multiplayer') renderPhone('multiplayer');
+  }
+  else if (msg.type === 'roomCreated') {
+    mp.myId = msg.id;
+    mp.myName = msg.name;
+    mp.roomCode = msg.code;
+    mp.inRoom = true;
+    player.pos.set(msg.spawn.x, player.eye, msg.spawn.z);
+    player.vel.set(0, 0, 0);
+    player.yaw = msg.spawn.yaw || 0;
+    currentInterior = null;
+    for (const p of msg.players) upsertRemotePlayer(p);
+    toast(`🏠 اتعمل روم! الكود: ${msg.code}`);
+    if (phoneOpen) renderPhone('multiplayer');
+  }
+  else if (msg.type === 'roomJoined') {
+    mp.myId = msg.id;
+    mp.myName = msg.name;
+    mp.roomCode = msg.code;
+    mp.inRoom = true;
+    player.pos.set(msg.spawn.x, player.eye, msg.spawn.z);
+    player.vel.set(0, 0, 0);
+    player.yaw = msg.spawn.yaw || 0;
+    currentInterior = null;
+    for (const p of msg.players) upsertRemotePlayer(p);
+    toast(`✅ دخلت الروم ${msg.code}!`);
+    if (phoneOpen) renderPhone('multiplayer');
+  }
+  else if (msg.type === 'join') {
+    upsertRemotePlayer(msg.player);
+    toast(`👋 ${msg.player.name} دخل الروم`);
+  }
+  else if (msg.type === 'leave') {
+    const rp = mp.players[msg.id];
+    if (rp) toast(`👋 ${rp.name} خرج`);
+    removeRemotePlayer(msg.id);
+  }
+  else if (msg.type === 'pos') {
+    upsertRemotePlayer(msg);
+  }
+  else if (msg.type === 'chat') {
+    addChatMessage(msg.name, msg.text);
+  }
+  else if (msg.type === 'error') {
+    toast(`⚠️ ${msg.message}`);
+    if (phoneOpen) renderPhone('multiplayer');
+  }
+}
+
+function connectToServer(url, onConnected) {
+  if (mp.ws && mp.ws.readyState === WebSocket.OPEN) {
+    onConnected && onConnected();
+    return;
+  }
+  try {
+    mp.ws = new WebSocket(url);
+    mp.ws.onopen = () => {
+      mp.connected = true;
+      onConnected && onConnected();
+    };
+    mp.ws.onmessage = onServerMessage;
+    mp.ws.onerror = () => {
+      mp.connected = false;
+      toast('⚠️ مش قادر أتصل بالسيرفر — اتأكد إن السيرفر شغال');
+      if (phoneOpen) renderPhone('multiplayer');
+    };
+    mp.ws.onclose = () => {
+      mp.connected = false;
+      mp.inRoom = false;
+      mp.roomCode = null;
+      for (const id in mp.players) removeRemotePlayer(id);
+      if (phoneOpen && curApp === 'multiplayer') renderPhone('multiplayer');
+    };
+  } catch (e) {
+    toast('⚠️ فشل الاتصال');
+    mp.connected = false;
+  }
+}
+
+function addChatMessage(name, text) {
+  mp.chatLog.push({ name, text });
+  if (mp.chatLog.length > 6) mp.chatLog.shift();
+  const el = document.getElementById('chatBox');
+  if (el) {
+    el.innerHTML = mp.chatLog.map(m =>
+      `<div><b style="color:#7fd4ff">${escapeHtml(m.name)}:</b> ${escapeHtml(m.text)}</div>`
+    ).join('');
+    el.style.display = 'block';
+    clearTimeout(el._hideTimer);
+    el._hideTimer = setTimeout(() => { el.style.display = 'none'; }, 12000);
+  }
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[c]));
+}
+
+function refreshPlayersList() {
+  const el = document.getElementById('playersListBox');
+  if (!el) return;
+  const count = Object.keys(mp.players).length + 1;
+  let html = `<div style="color:#7fd4ff;font-weight:bold;margin-bottom:6px;">👥 اللاعبين (${count}):</div>`;
+  html += `<div class="pl"><span>👑 ${escapeHtml(mp.myName)} (أنت)</span><span class="dot" style="background:#7fff9f"></span></div>`;
+  for (const id in mp.players) {
+    const p = mp.players[id];
+    const color = '#' + (p.color || 0x3a9ad8).toString(16).padStart(6, '0');
+    html += `<div class="pl"><span>👤 ${escapeHtml(p.name)}</span><span class="dot" style="background:${color}"></span></div>`;
+  }
+  el.innerHTML = html;
+}
+
+function doCreateRoom() {
+  const url = mp.serverURL || `ws://${location.hostname || 'localhost'}:8080`;
+  connectToServer(url, () => {
+    mp.ws.send(JSON.stringify({
+      type: 'createRoom',
+      name: mp.myName,
+      color: mp.myColor,
+    }));
+  });
+}
+
+function doJoinRoom(code) {
+  const url = mp.serverURL || `ws://${location.hostname || 'localhost'}:8080`;
+  connectToServer(url, () => {
+    mp.ws.send(JSON.stringify({
+      type: 'joinRoom',
+      code: code.toUpperCase().trim(),
+      name: mp.myName,
+      color: mp.myColor,
+    }));
+  });
+}
+
+function doLeaveRoom() {
+  if (mp.ws) { mp.ws.close(); mp.ws = null; }
+  mp.inRoom = false;
+  mp.connected = false;
+  mp.roomCode = null;
+  for (const id in mp.players) removeRemotePlayer(id);
+  toast('🚪 خرجت من الروم');
+  if (phoneOpen) renderPhone('multiplayer');
+}
+
+function copyToClipboard(text) {
+  text = text.replace(/[📡\s]/g, '');
+  navigator.clipboard.writeText(text).then(() => {
+    toast('📋 اتنسخ! ابعته لصاحبك');
+  }).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    toast('📋 اتنسخ!');
+  });
+}
+
+// =========================================================
+//        واجهة الموبايل
+// =========================================================
+const phoneEl = document.getElementById('phone');
+const phoneScreen = document.getElementById('phoneScreen');
+const phoneMoney = document.getElementById('phoneMoney');
+const phoneBtn = document.getElementById('phoneBtn');
+const appBtns = {
+  missions: document.getElementById('appMissions'),
+  food: document.getElementById('appFood'),
+  wallet: document.getElementById('appWallet'),
+  multiplayer: document.getElementById('appMultiplayer'),
+};
+let phoneOpen = false;
+let curApp = 'missions';
+
+function requestLock() {
+  try {
+    const p = renderer.domElement.requestPointerLock();
+    if (p && typeof p.catch === 'function') p.catch(() => {});
+  } catch (e) {}
+  setTimeout(() => {
+    if (!locked && !phoneOpen) { blocker.style.display = 'flex'; hud.style.display = 'none'; syncTopButtons(); }
+  }, 500);
+}
+
+function openPhone() {
+  if (phoneOpen) return;
+  phoneOpen = true;
+  phoneBtn.classList.add('on');
+  phoneEl.classList.remove('hidden');
+  blocker.style.display = 'none';
+  hud.style.display = 'block';
+  syncTopButtons();
+  if (document.pointerLockElement) document.exitPointerLock();
+  locked = false;
+  for (const k in keys) keys[k] = false;
+  renderPhone('missions');
+}
+
+function closePhone() {
+  if (!phoneOpen) return;
+  phoneOpen = false;
+  phoneBtn.classList.remove('on');
+  phoneEl.classList.add('hidden');
+  syncTopButtons();
+  requestLock();
+}
+
+function togglePhone() { phoneOpen ? closePhone() : openPhone(); }
+
+phoneBtn.addEventListener('click', openPhone);
+document.getElementById('phoneClose').addEventListener('click', closePhone);
+for (const k in appBtns) appBtns[k].addEventListener('click', () => renderPhone(k));
+
+phoneScreen.addEventListener('click', e => {
+  const b = e.target.closest('button[data-act]');
+  if (!b || b.disabled) return;
+  const act = b.dataset.act;
+  if (act === 'deliver') startMission('deliver');
+  else if (act === 'collect') startMission('collect');
+  else if (act === 'cancel') cancelMission();
+  else if (act === 'buyFood') { if (buyMeal('دليفري 🛵')) renderPhone(curApp); }
+});
+
+function renderPhone(app) {
+  curApp = app || curApp;
+  phoneMoney.textContent = `💰 ${money} ج`;
+  for (const k in appBtns) appBtns[k].classList.toggle('sel', k === curApp);
+
+  let h = '';
+  if (curApp === 'missions') {
+    if (activeMission) {
+      const M = activeMission;
+      if (M.type === 'deliver') {
+        h = `<h3>📋 المهمة الحالية</h3><div class="mis"><b>🚕 توصيلة زبون</b><br>` +
+          (M.stage === 1
+            ? `روح خُد الزبون من ${M.fromIcon} <b>${M.fromName}</b>`
+            : `الزبون معاك — وصّله ${M.toIcon} <b>${M.toName}</b>`) +
+          `<br><span class="pay">💰 المكافأة: ${M.reward} جنيه</span></div>
+           <button class="pBtn red" data-act="cancel">🚫 إلغاء المهمة</button>`;
+      } else {
+        h = `<h3>📋 المهمة الحالية</h3><div class="mis"><b>📦 جمع شنط</b><br>
+           لقيت <b>${M.got}</b> من <b>${M.total}</b> حوالي ${M.placeIcon} <b>${M.placeName}</b><br>
+           <span class="pay">💰 المكافأة: ${M.reward} جنيه</span></div>
+           <button class="pBtn red" data-act="cancel">🚫 إلغاء المهمة</button>`;
+      }
+    } else {
+      h = `<h3>📋 اختار مهمة</h3>
+        <div class="mis"><b>🚕 توصيلة زبون</b><br>تروح تاخد زبون من مكان وتوصله مكان تاني.<br>
+        <span class="pay">💰 40–200 جنيه</span></div>
+        <button class="pBtn" data-act="deliver">ابدأ مهمة توصيل</button>
+        <div class="mis" style="margin-top:12px"><b>📦 جمع شنط</b><br>تلف المدينة تجمع 5 شنط دهب.<br>
+        <span class="pay">💰 90 جنيه</span></div>
+        <button class="pBtn blue" data-act="collect">ابدأ مهمة جمع</button>`;
+    }
+  }
+  else if (curApp === 'food') {
+    const poor = money < MEAL_PRICE;
+    h = `<h3>🍔 الأكل</h3>
+      <div class="mis">معاك <b>${food}</b> وجبة • الشبع <b>${Math.round(hunger)}%</b><br>
+      تمن الوجبة <span class="pay">${MEAL_PRICE} جنيه</span> • فلوسك <b>${money}</b></div>
+      <button class="pBtn" data-act="buyFood" ${poor ? 'disabled' : ''}>🛵 اطلب أكل دليفري بـ ${MEAL_PRICE} جنيه</button>
+      ${poor ? `<div class="mis" style="margin-top:10px;color:#ff9a9a">💸 مش معاك فلوس كفاية</div>` : ''}`;
+  }
+  else if (curApp === 'wallet') {
+    h = `<h3>💰 فلوسي</h3>
+      <div class="mis">اللي معاك دلوقتي: <span class="pay">${money} جنيه</span></div>
+      <div class="mis">مهمات خلصتها: <b>${missionsDone}</b><br>إجمالي اللي كسبته: <b>${missionsEarned}</b> جنيه</div>`;
+  }
+  else if (curApp === 'multiplayer') {
+    h = renderMultiplayerApp();
+  }
+  phoneScreen.innerHTML = h;
+  if (curApp === 'multiplayer') refreshPlayersList();
+}
+
+function renderMultiplayerApp() {
+  if (!mp.connected && !mp.inRoom) {
+    return `
+      <h3>🌐 الرومات</h3>
+      <div class="roomHint">اتصل بالسيرفر عشان تعمل روم أو تدخل روم صاحبك.</div>
+      <div class="roomIP" onclick="window.copyToClipboard(this.textContent)">
+        📡 ${mp.serverAddress || 'بيتحمّل...'}
+      </div>
+      <div class="roomHint">👆 اضغط على العنوان عشان تنسخه</div>
+      <button class="pBtn" onclick="window.doCreateRoom()">🏠 إنشاء روم جديد</button>
+      <div style="height:12px"></div>
+      <div class="roomHint">أو ادخل روم صاحبك:</div>
+      <input id="roomCodeInput" class="roomInput" maxlength="5" placeholder="ABCDE">
+      <button class="pBtn blue" onclick="window.doJoinRoomFromInput()">🔗 دخول الروم</button>
+      <div style="margin-top:14px;font-size:12px;color:#7f96b4;text-align:center;line-height:1.6;">
+        💡 السيرفر لازم يكون شغال على جهاز من الاتنين<br>
+        (افتح <b>start.bat</b> عند صاحبك)
+      </div>
+    `;
+  }
+
+  if (mp.inRoom) {
+    return `
+      <h3>🏠 أنت في روم</h3>
+      <div class="roomHint">كود الروم (اقوله لصاحبك):</div>
+      <div class="roomCode">${mp.roomCode || '----'}</div>
+      <div class="roomHint">وعنوان السيرفر:</div>
+      <div class="roomIP" onclick="window.copyToClipboard(this.textContent)">
+        📡 ${mp.serverAddress}
+      </div>
+      <div id="playersListBox" class="playersList"></div>
+      <button class="pBtn red" onclick="window.doLeaveRoom()">🚪 خروج من الروم</button>
+      <div style="margin-top:12px;font-size:12px;color:#7f96b4;text-align:center;">
+        💬 اضغط Enter للدردشة
+      </div>
+    `;
+  }
+
+  return `<div class="roomHint">جاري الاتصال...</div>`;
+}
+
+// =========================================================
+//        الحركة والتفاعل
+// =========================================================
+function resolvePlayerCollision() {
+  const r = player.radius;
+  for (const s of solids) {
+    const feet = player.pos.y - player.eye;
+    if (feet > s.base + s.h - 0.15 || feet < s.base - 1.6) continue;
+    const cx = THREE.MathUtils.clamp(player.pos.x, s.x1, s.x2);
+    const cz = THREE.MathUtils.clamp(player.pos.z, s.z1, s.z2);
+    const dx = player.pos.x - cx, dz = player.pos.z - cz;
+    const d2 = dx * dx + dz * dz;
+    if (d2 < r * r) {
+      const d = Math.sqrt(d2) || 0.0001;
+      player.pos.x = cx + (dx / d) * r;
+      player.pos.z = cz + (dz / d) * r;
+    } else if (player.pos.x > s.x1 - r && player.pos.x < s.x2 + r &&
+               player.pos.z > s.z1 - r && player.pos.z < s.z2 + r) {
+      const pushX1 = Math.abs(player.pos.x - (s.x1 - r)), pushX2 = Math.abs(s.x2 + r - player.pos.x);
+      const pushZ1 = Math.abs(player.pos.z - (s.z1 - r)), pushZ2 = Math.abs(s.z2 + r - player.pos.z);
+      const m = Math.min(pushX1, pushX2, pushZ1, pushZ2);
+      if (m === pushX1) player.pos.x = s.x1 - r;
+      else if (m === pushX2) player.pos.x = s.x2 + r;
+      else if (m === pushZ1) player.pos.z = s.z1 - r;
+      else player.pos.z = s.z2 + r;
+    }
+  }
+}
+
+function updatePlayerOnFoot(dt) {
+  if (sleeping || teleporting || phoneOpen) { camera.position.copy(player.pos); camera.rotation.set(player.pitch, player.yaw, 0); return; }
+  const speed = (keys['ShiftLeft'] || keys['ShiftRight']) ? 12 : 7;
+  const fwd = new THREE.Vector3(-Math.sin(player.yaw), 0, -Math.cos(player.yaw));
+  const right = new THREE.Vector3(-fwd.z, 0, fwd.x);
+  const move = new THREE.Vector3();
+  if (keys['KeyW']) move.add(fwd);
+  if (keys['KeyS']) move.sub(fwd);
+  if (keys['KeyD']) move.add(right);
+  if (keys['KeyA']) move.sub(right);
+  if (move.lengthSq() > 0) move.normalize().multiplyScalar(speed);
+
+  player.pos.x += move.x * dt;
+  player.pos.z += move.z * dt;
+  resolvePlayerCollision();
+
+  const prevFeet = player.pos.y - player.eye;
+  let gY = groundAt(player.pos.x, player.pos.z);
+  if (keys['Space'] && player.onGround) { player.vel.y = 9.5; player.onGround = false; }
+  player.vel.y -= 26 * dt;
+  player.pos.y += player.vel.y * dt;
+  let feet = player.pos.y - player.eye;
+
+  if (player.vel.y <= 0 && prevFeet >= gY - 0.35) {
+    for (const pf of platforms) {
+      if (player.pos.x >= pf.x1 - 0.3 && player.pos.x <= pf.x2 + 0.3 &&
+          player.pos.z >= pf.z1 - 0.3 && player.pos.z <= pf.z2 + 0.3 &&
+          feet <= pf.top + 0.001 && prevFeet >= pf.top - 0.6) {
+        feet = pf.top; gY = pf.top;
+        player.pos.y = pf.top + player.eye;
+        player.vel.y = 0;
+        player.onGround = true;
+      }
+    }
+  }
+
+  if (feet <= gY) {
+    player.pos.y = gY + player.eye;
+    player.vel.y = 0;
+    player.onGround = true;
+  } else if (feet > gY + 0.1) {
+    player.onGround = false;
+  }
+
+  camera.position.copy(player.pos);
+  camera.rotation.set(player.pitch, player.yaw, 0);
+
+  hunger = Math.max(0, hunger - 0.35 * dt);
+  if (hunger <= 0 && !hungerWarned) {
+    hungerWarned = true;
+    toast('🥵 جعت خالص! روح مطعم اطلب أكل (F) وكل (F)');
+  }
+}
+
+function updateDoor(dt) {
+  const dcx = (DOOR_X1 + DOOR_X2) / 2;
+  const d = Math.hypot(player.pos.x - dcx, player.pos.z - HZ2);
+  const target = (d < 4.5 && !player.vehicle) ? 1 : 0;
+  doorOpenT = THREE.MathUtils.clamp(THREE.MathUtils.lerp(doorOpenT, target, 4 * dt), 0, 1);
+  doorPivot.rotation.y = doorOpenT * 1.9;
+}
+
+function nearestVehicle() {
+  let best = null, bestD = Infinity;
+  for (const v of vehicles) {
+    const d = Math.hypot(player.pos.x - v.group.position.x, player.pos.z - v.group.position.z);
+    if (d < v.boardR && d < bestD) { bestD = d; best = v; }
+  }
+  return best;
+}
+
+let pendingVehicle = null;
+
+function chooseVehicleRole(v) {
+  if (!v) return;
+  if (v.type !== 'bus' && v.type !== 'train') {
+    enterVehicle(v, 'driver');
+    return;
+  }
+  pendingVehicle = v;
+  if (document.pointerLockElement) document.exitPointerLock();
+  const modal = document.getElementById('vehicleRoleModal');
+  document.getElementById('vehicleRoleName').textContent = v.name;
+  modal.classList.add('show');
+}
+
+function closeVehicleRoleModal() {
+  pendingVehicle = null;
+  document.getElementById('vehicleRoleModal').classList.remove('show');
+}
+
+function enterVehicle(v, role = 'passenger') {
+  if (!v) return;
+  closeVehicleRoleModal();
+  player.vehicle = v;
+  v.role = role;
+
+  if (role === 'passenger') {
+    if (v.type === 'bus' && v.ai) {
+      v.ai.stopping = 0;
+      if (v.ai.speed <= 0) v.ai.speed = 9;
+    }
+    if (v.type === 'train' && v.loop) {
+      v.loop.dwell = 0;
+      v.loop.dwelled = false;
+      if (v.loop.cruise <= 0) v.loop.cruise = 22;
+    }
+  }
+  if (role === 'driver') {
+    if (v.type === 'bus' || v.type === 'train') {
+      v.speed = Math.max(0, Math.abs(v.speed));
+    } else if (!v.shuttle && !v.loop) {
+      v.speed = 0;
+    }
+  }
+
+  const vn = document.getElementById('vehicleName');
+  vn.style.display = 'block';
+  if (role === 'passenger') {
+    vn.textContent = `${v.name} — 💺 راكب • E للنزول`;
+  } else {
+    vn.textContent = `${v.name} — 🕹️ سائق • W/S سرعة • A/D تحويلة السكة • E للنزول`;
+  }
+  document.getElementById('speedometer').style.display = 'block';
+}
+
+function exitVehicle() {
+  const v = player.vehicle;
+  if (!v) return;
+  if (v.type === 'bus') {
+    v.role = 'passenger';
+    if (v.ai) v.ai.stopping = 0;
+  } else if (v.type === 'train') {
+    v.role = 'passenger';
+  }
+  player.vehicle = null;
+  const side = new THREE.Vector3(Math.cos(v.yaw), 0, -Math.sin(v.yaw)).multiplyScalar(v.radius + 1.4);
+  let nx = v.group.position.x + side.x, nz = v.group.position.z + side.z;
+  if (v.collides(nx, nz) || v.type === 'train') {
+    nx = v.group.position.x - side.x;
+    nz = v.group.position.z - side.z;
+  }
+  player.pos.set(nx, v.group.position.y + player.eye, nz);
+  player.vel.set(0, 0, 0);
+  player.yaw = v.yaw + Math.PI;
+  document.getElementById('vehicleName').style.display = 'none';
+  document.getElementById('speedometer').style.display = 'none';
+}
+
+function updateCameraVehicle(dt) {
+  const v = player.vehicle;
+  const p = v.group.position;
+  if ((v.type === 'train' || v.type === 'metro') && v.role === 'passenger') {
+    camera.position.set(p.x, p.y + 2.6, p.z);
+    const look = new THREE.Vector3(p.x, p.y + 2.4, p.z).add(v.forward().multiplyScalar(10));
+    camera.lookAt(look);
+    player.pos.set(p.x, p.y + 1, p.z);
+    return;
+  }
+  const back = v.forward().multiplyScalar(-(v.type === 'plane' ? 16 : v.type === 'bus' ? 11 : 8));
+  const camTarget = new THREE.Vector3(p.x + back.x, p.y + (v.type === 'plane' ? 6 : 4), p.z + back.z);
+  camera.position.lerp(camTarget, 1 - Math.pow(0.001, dt));
+  camera.lookAt(p.x, p.y + 1.5, p.z);
+  player.pos.set(p.x, p.y + 1.2, p.z);
+
+  const kmh = Math.abs(Math.round(v.speed * 3.6));
+  document.getElementById('speedValue').textContent = kmh;
+  if (v.type === 'plane') {
+    const alt = Math.round(p.y);
+    document.getElementById('speedValue').textContent = `${kmh} | ارتفاع ${alt}م`;
+  }
+}
+
+// ---------- الخريطة ----------
+const mmCanvas = document.getElementById('minimapCanvas');
+const mm = mmCanvas.getContext('2d');
+const mmBase = document.createElement('canvas');
+mmBase.width = mmBase.height = 180;
+const MM_S = 180 / 600;
+const mmToX = x => (x + 300) * MM_S;
+const mmToY = z => (z + 300) * MM_S;
+
+(function drawBase() {
+  const c = mmBase.getContext('2d');
+  c.fillStyle = '#22301f'; c.fillRect(0, 0, 180, 180);
+  c.fillStyle = '#59636e';
+  for (const s of solids) {
+    if (s.base !== 0 || s.x1 < -300 || s.x2 > 300 || s.z1 < -300 || s.z2 > 300) continue;
+    c.fillRect(mmToX(s.x1), mmToY(s.z1), Math.max(1.5, (s.x2 - s.x1) * MM_S), Math.max(1.5, (s.z2 - s.z1) * MM_S));
+  }
+  const rw = ROAD_W * MM_S;
+  c.fillStyle = '#9aa2aa';
+  for (const v of LINES) {
+    c.fillRect(0, mmToY(v) - rw / 2, 180, rw);
+    c.fillRect(mmToX(v) - rw / 2, 0, rw, 180);
+  }
+  c.strokeStyle = '#f0d94a'; c.lineWidth = 0.7; c.setLineDash([3, 3]);
+  for (const v of LINES) {
+    c.beginPath(); c.moveTo(0, mmToY(v)); c.lineTo(180, mmToY(v)); c.stroke();
+    c.beginPath(); c.moveTo(mmToX(v), 0); c.lineTo(mmToX(v), 180); c.stroke();
+  }
+  c.setLineDash([]);
+  c.strokeStyle = '#5a9ad8'; c.lineWidth = 1.6;
+  c.strokeRect(mmToX(-RING), mmToY(-RING), 2 * RING * MM_S, 2 * RING * MM_S);
+  c.fillStyle = '#2c3136'; c.fillRect(mmToX(40), mmToY(140), 210 * MM_S, 20 * MM_S);
+  c.strokeStyle = '#ffffff'; c.lineWidth = 0.7; c.setLineDash([2, 2]);
+  c.beginPath(); c.moveTo(mmToX(45), mmToY(150)); c.lineTo(mmToX(245), mmToY(150)); c.stroke();
+  c.setLineDash([]);
+  c.fillStyle = '#c93a6e';
+  c.fillRect(mmToX(OPEN.x1), mmToY(OPEN.z1), (OPEN.x2 - OPEN.x1) * MM_S, (OPEN.z2 - OPEN.z1) * MM_S);
+  c.font = '12px "Segoe UI Emoji", Tahoma, sans-serif';
+  c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.lineJoin = 'round';
+  for (const p of POIS) {
+    const px = mmToX(p.x), py = mmToY(p.z);
+    c.lineWidth = 3; c.strokeStyle = 'rgba(6,12,22,0.9)'; c.strokeText(p.icon, px, py);
+    c.fillStyle = '#ffffff'; c.fillText(p.icon, px, py);
+  }
+})();
+
+function mapHeading() {
+  let fx, fz;
+  if (player.vehicle) {
+    const f = player.vehicle.forward();
+    fx = f.x; fz = f.z;
+  } else {
+    fx = -Math.sin(player.yaw); fz = -Math.cos(player.yaw);
+  }
+  if (Math.abs(fx) < 1e-6 && Math.abs(fz) < 1e-6) return -player.yaw;
+  return Math.atan2(fx, -fz);
+}
+
+function drawPlayerArrow(ctx, px, py, size) {
+  ctx.save();
+  ctx.translate(px, py);
+  ctx.rotate(mapHeading());
+  ctx.fillStyle = '#7fff9f';
+  ctx.strokeStyle = '#0a1a10'; ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, -size); ctx.lineTo(size * 0.7, size * 0.8); ctx.lineTo(-size * 0.7, size * 0.8);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.restore();
+}
+
+function drawInteriorMap() {
+  const I = interiors[currentInterior], r = I.rect;
+  mm.fillStyle = '#101820'; mm.fillRect(0, 0, 180, 180);
+  const sc = Math.min(140 / (r.x2 - r.x1), 140 / (r.z2 - r.z1));
+  const cx = (r.x1 + r.x2) / 2, cz = (r.z1 + r.z2) / 2;
+  const toX = x => 90 + (x - cx) * sc, toY = z => 94 + (z - cz) * sc;
+  mm.fillStyle = '#4a3c2c';
+  mm.fillRect(toX(r.x1), toY(r.z1), (r.x2 - r.x1) * sc, (r.z2 - r.z1) * sc);
+  mm.fillStyle = '#8a7a62';
+  for (const s of solids) {
+    if (s.x1 < r.x1 - 1 || s.x2 > r.x2 + 1 || s.z1 < r.z1 - 1 || s.z2 > r.z2 + 1) continue;
+    mm.fillRect(toX(s.x1), toY(s.z1), Math.max(1.5, (s.x2 - s.x1) * sc), Math.max(1.5, (s.z2 - s.z1) * sc));
+  }
+  mm.strokeStyle = '#e8d8b0'; mm.lineWidth = 3;
+  mm.strokeRect(toX(r.x1), toY(r.z1), (r.x2 - r.x1) * sc, (r.z2 - r.z1) * sc);
+  mm.fillStyle = '#7fd8ff';
+  for (const it of interactions) {
+    if (it.x < r.x1 || it.x > r.x2 || it.z < r.z1 || it.z > r.z2) continue;
+    mm.beginPath(); mm.arc(toX(it.x), toY(it.z), 3, 0, 7); mm.fill();
+  }
+  mm.fillStyle = '#ffd27f';
+  for (const d of doors) {
+    if (d.x < r.x1 - 1 || d.x > r.x2 + 1 || d.z < r.z1 - 1 || d.z > r.z2 + 1) continue;
+    mm.fillRect(toX(d.x) - 4, toY(d.z) - 2, 8, 4);
+  }
+  drawPlayerArrow(mm, toX(player.pos.x), toY(player.pos.z), 5);
+  mm.fillStyle = '#ffe9a8';
+  mm.font = 'bold 12px Tahoma, Arial'; mm.textAlign = 'center'; mm.textBaseline = 'top';
+  mm.fillText(`${I.icon} جوه: ${I.name}`, 90, 4);
+}
+
+function drawMinimap() {
+  if (currentInterior) { drawInteriorMap(); return; }
+  mm.drawImage(mmBase, 0, 0);
+  for (const v of vehicles) {
+    if (v.group.position.x < -300 || v.group.position.x > 300) continue;
+    mm.fillStyle = v.type === 'plane' ? '#e8e8ff' : v.type === 'bus' ? '#e8b53a' :
+                   (v.type === 'train' || v.type === 'metro') ? '#5a9ad8' : '#e85a5a';
+    mm.beginPath(); mm.arc(mmToX(v.group.position.x), mmToY(v.group.position.z), 2.4, 0, 7); mm.fill();
+  }
+  if (activeMission) {
+    const M = activeMission;
+    if (M.type === 'collect') {
+      mm.fillStyle = '#ffd86a';
+      for (const it of M.items) {
+        if (it.taken) continue;
+        mm.beginPath(); mm.arc(mmToX(it.x), mmToY(it.z), 2, 0, 7); mm.fill();
+      }
+    }
+    const t = missionTarget();
+    if (t) {
+      const px = mmToX(t.x), py = mmToY(t.z);
+      mm.save();
+      mm.translate(px, py); mm.rotate(Math.PI / 4);
+      mm.fillStyle = '#ffe14a'; mm.strokeStyle = '#4a3400'; mm.lineWidth = 1.2;
+      mm.beginPath(); mm.rect(-4, -4, 8, 8); mm.fill(); mm.stroke();
+      mm.restore();
+      mm.font = '11px "Segoe UI Emoji", Tahoma, sans-serif';
+      mm.textAlign = 'center'; mm.textBaseline = 'middle';
+      mm.fillText(t.icon, px, py - 10);
+    }
+  }
+  for (const id in mp.players) {
+    const rp = mp.players[id];
+    if (rp.mesh.position.x < -300 || rp.mesh.position.x > 300) continue;
+    mm.fillStyle = '#5aff9a';
+    mm.beginPath();
+    mm.arc(mmToX(rp.mesh.position.x), mmToY(rp.mesh.position.z), 3, 0, 7);
+    mm.fill();
+    mm.strokeStyle = '#0a1a10';
+    mm.lineWidth = 1;
+    mm.stroke();
+  }
+  drawPlayerArrow(mm, mmToX(player.pos.x), mmToY(player.pos.z), 5);
+}
+
+const hungerFill = document.getElementById('hungerFill');
+const foodCount = document.getElementById('foodCount');
+const moneyCount = document.getElementById('moneyCount');
+const missionHud = document.getElementById('missionHud');
+
+// =========================================================
+//              الحلقة الرئيسية
+// =========================================================
+const clock = new THREE.Clock();
+let promptTimer = 0;
+let gameTime = 0;
+
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), 0.05);
+  gameTime += dt;
+
+  for (const v of vehicles) {
+    v.update(dt, keys, player.vehicle === v);
+  }
+  updateDoor(dt);
+  if (doorLock > 0) doorLock -= dt;
+  updateMissions(dt, gameTime);
+
+  if (mp.inRoom) sendMyPos(dt);
+  updateRemotePlayers(dt);
+
+  sun.position.set(player.pos.x + 140, 220, player.pos.z + 80);
+  sun.target.position.set(player.pos.x, player.pos.y, player.pos.z);
+  sun.target.updateMatrixWorld();
+
+  if (player.vehicle) {
+    updateCameraVehicle(dt);
+    if (player.vehicle.type === 'train' && player.vehicle.role === 'driver') {
+      const L = player.vehicle.loop;
+      if (L && L.mode === 'ring') {
+        const sw = nearestTrainSwitch(L, 13);
+        if (sw) {
+          const f = player.vehicle.forward();
+          const left = new THREE.Vector3(-f.z, 0, f.x);
+          const tangent = branchTangent(sw.branch, sw.end === 0 ? 1 : -1);
+          const isLeft = tangent.dot(left) > 0;
+          promptEl.innerHTML = `🔀 مفترق سكة — <kbd>A</kbd> شمال / <kbd>D</kbd> يمين — اختار أنت`;
+          promptEl.style.display = 'block';
+          promptTimer = 0.25;
+        } else if (promptTimer > 0) {
+          promptTimer -= dt;
+        } else {
+          promptEl.style.display = 'none';
+        }
+      } else if (L && L.mode === 'branch') {
+        const bsw = nearestBranchCrossing(L, 13);
+        if (bsw) {
+          promptEl.innerHTML = '🔀 تفرع جديد — <kbd>A</kbd> شمال / <kbd>D</kbd> يمين — اختار أنت';
+        } else {
+          promptEl.innerHTML = '🚆 أنت على السكة الفرعية — W/S للسرعة • E للنزول';
+        }
+        promptEl.style.display = 'block';
+        promptTimer = 0.25;
+      }
+    }
+  } else {
+    updatePlayerOnFoot(dt);
+    const door = nearestDoor();
+    const it = nearestInteraction();
+    const near = nearestVehicle();
+    const lines = [];
+    if (door) lines.push(`اضغط <kbd>E</kbd> — ${door.label}`);
+    else if (near) {
+      if (near.type === 'bus' || near.type === 'train') {
+        lines.push(`اضغط <kbd>E</kbd> — ${near.name} • اختر <b>سائق</b> أو <b>راكب</b>`);
+      } else {
+        lines.push(`اضغط <kbd>E</kbd> لركوب ${near.name}`);
+      }
+    }
+    if (it) lines.push(`اضغط <kbd>F</kbd> — ${it.label}`);
+    else if (food > 0 && hunger < 70) lines.push(`اضغط <kbd>F</kbd> عشان تاكل 🍔 (معاك ${food})`);
+    if (lines.length) {
+      promptEl.innerHTML = lines.join('<br>');
+      promptEl.style.display = 'block';
+      promptTimer = 0.2;
+    } else if (promptTimer > 0) {
+      promptTimer -= dt;
+    } else {
+      promptEl.style.display = 'none';
+    }
+  }
+
+  hungerFill.style.width = hunger + '%';
+  hungerFill.style.background = hunger > 40 ? '#5ad87a' : '#d85a5a';
+  foodCount.textContent = food;
+  moneyCount.textContent = money;
+
+  const mt = missionTarget();
+  if (mt) {
+    const M = activeMission;
+    const d = Math.round(Math.hypot(player.pos.x - mt.x, player.pos.z - mt.z));
+    missionHud.innerHTML = M.type === 'deliver'
+      ? `${mt.icon} ${M.stage === 1 ? 'خُد الزبون من' : 'وصّل الزبون لـ'} <b>${M.stage === 1 ? M.fromName : M.toName}</b> — ${d}م • 💰 ${M.reward} ج`
+      : `${mt.icon} اجمع الشنط: <b>${M.got}/${M.total}</b> — ${d}م • 💰 ${M.reward} ج`;
+  } else {
+    missionHud.textContent = '📋 مفيش مهمة — افتح الموبايل بـ Tab';
+  }
+
+  if (toastTimer > 0) {
+    toastTimer -= dt;
+    if (toastTimer <= 0) toastEl.style.display = 'none';
+  }
+
+  drawMinimap();
+  renderer.render(scene, camera);
+}
+animate();
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+// عرّض الدوال عالمياً للاستخدام في onclick
+window.copyToClipboard = copyToClipboard;
+window.doCreateRoom = doCreateRoom;
+window.doLeaveRoom = doLeaveRoom;
+window.doJoinRoomFromInput = function() {
+  const inp = document.getElementById('roomCodeInput');
+  const code = inp ? inp.value.trim().toUpperCase() : '';
+  if (code.length !== 5) {
+    toast('⚠️ الكود لازم 5 حروف');
+    return;
+  }
+  doJoinRoom(code);
+};
+</script>
+</body>
+</html>
